@@ -22,7 +22,8 @@ export default function Negotiation() {
     if (!user) { navigate('/'); return }
     api.get(`/negotiations/${id}`).then(({ data }) => {
       setNeg(data); setMessages(data.messages || [])
-    }).finally(() => setLoading(false))
+    }).catch(() => navigate('/profile?tab=negotiations'))
+      .finally(() => setLoading(false))
 
     const socket = io('/', { path: '/socket.io' })
     socketRef.current = socket
@@ -62,6 +63,7 @@ export default function Negotiation() {
   if (!neg) return null
 
   const isBuyer = user?.id === neg.buyer_id
+  const isSeller = user?.id === neg.seller_id
   const isOpen = neg.status === 'open'
 
   return (
@@ -69,7 +71,10 @@ export default function Negotiation() {
       {/* Product header */}
       <div className="card p-4 mb-4 flex gap-4">
         <Link to={`/products/${neg.product_id}`} className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-          {neg.product_images?.[0] && <img src={imgUrl(neg.product_images[0])} alt="" className="w-full h-full object-cover" />}
+          {neg.product_images?.[0] && (
+              <img src={imgUrl(neg.product_images[0])} alt="" className="w-full h-full object-cover"
+                onError={e => { e.target.style.display = 'none' }} />
+            )}
         </Link>
         <div className="flex-1">
           <Link to={`/products/${neg.product_id}`} className="font-semibold hover:text-primary">{neg.product_title}</Link>
@@ -86,8 +91,9 @@ export default function Negotiation() {
           )}
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xs text-gray-400">Con</p>
+          <p className="text-xs text-gray-400">{isBuyer ? 'Vendedor' : 'Comprador'}</p>
           <p className="font-medium text-sm">@{isBuyer ? neg.seller_username : neg.buyer_username}</p>
+          <p className="text-xs text-gray-400 mt-1">{isSeller ? 'Tú vendes' : 'Tú compras'}</p>
         </div>
       </div>
 
@@ -114,7 +120,9 @@ export default function Negotiation() {
             )
           })}
           {messages.length === 0 && (
-            <div className="text-center text-gray-400 text-sm py-8">Inicia la conversación para negociar el precio</div>
+            <div className="text-center text-gray-400 text-sm py-8">
+              {isBuyer ? 'Inicia la conversación para negociar el precio' : 'El comprador aún no ha enviado mensajes'}
+            </div>
           )}
           <div ref={bottomRef} />
         </div>
@@ -152,7 +160,8 @@ export default function Negotiation() {
             {neg.status === 'agreed' ? (
               <div>
                 <p className="mb-2">Precio acordado: <strong>${Number(neg.agreed_price).toLocaleString()}</strong></p>
-                <Link to="/cart" className="btn-primary">Ir al carrito</Link>
+                {isBuyer && <Link to="/cart" className="btn-primary">Ir al carrito</Link>}
+                {isSeller && <p className="text-green-600 font-medium">El comprador tiene el precio en su carrito</p>}
               </div>
             ) : 'Negociación cerrada'}
           </div>

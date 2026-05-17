@@ -10,6 +10,7 @@ const TABS = [
   { id: 'catalog', label: 'Mis productos' },
   { id: 'orders', label: 'Mis pedidos' },
   { id: 'selling', label: 'Mis ventas' },
+  { id: 'negotiations', label: 'Mis chats' },
   { id: 'wishlist', label: 'Lista de deseos' },
   { id: 'addresses', label: 'Direcciones' },
   { id: 'payments', label: 'Pagos' },
@@ -21,7 +22,7 @@ export default function Profile() {
   const navigate = useNavigate()
   const [sp] = useSearchParams()
   const [tab, setTab] = useState(sp.get('tab') || 'catalog')
-  const [data, setData] = useState({ catalog: [], orders: [], selling: [], wishlist: [], addresses: [], payments: [] })
+  const [data, setData] = useState({ catalog: [], orders: [], selling: [], negotiations: [], wishlist: [], addresses: [], payments: [] })
   const [loading, setLoading] = useState(true)
   const [reviewModal, setReviewModal] = useState(null)
   const [reviewData, setReviewData] = useState({ rating: 5, content: '' })
@@ -36,15 +37,16 @@ export default function Profile() {
     if (!user) { navigate('/'); return }
     setSettingsForm({ username: user.username, email: user.email, recovery_email: user.recovery_email || '', password: '' })
     const load = async () => {
-      const [catalog, orders, selling, wishlist, addresses, payments] = await Promise.all([
+      const [catalog, orders, selling, negotiations, wishlist, addresses, payments] = await Promise.all([
         api.get(`/products?seller=${user.id}&limit=50`),
         api.get('/orders'),
         api.get('/orders/selling'),
+        api.get('/negotiations'),
         api.get('/wishlist'),
         api.get('/users/me/addresses'),
         api.get('/users/me/payments'),
       ])
-      setData({ catalog: catalog.data.products, orders: orders.data, selling: selling.data, wishlist: wishlist.data, addresses: addresses.data, payments: payments.data })
+      setData({ catalog: catalog.data.products, orders: orders.data, selling: selling.data, negotiations: negotiations.data, wishlist: wishlist.data, addresses: addresses.data, payments: payments.data })
       setLoading(false)
     }
     load()
@@ -230,6 +232,52 @@ export default function Profile() {
                   <p className="font-bold text-primary text-sm shrink-0">${(item.price * item.quantity).toLocaleString()}</p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Negotiations */}
+          {tab === 'negotiations' && (
+            <div className="space-y-3">
+              <h2 className="font-semibold">Mis chats de negociación ({data.negotiations.length})</h2>
+              {data.negotiations.length === 0 ? (
+                <p className="text-gray-500 text-sm">No tienes negociaciones activas.</p>
+              ) : data.negotiations.map(neg => {
+                const isBuyer = neg.buyer_id === user.id
+                const counterpart = isBuyer ? neg.seller_username : neg.buyer_username
+                const statusColors = {
+                  open: 'bg-blue-100 text-blue-700',
+                  agreed: 'bg-green-100 text-green-700',
+                  rejected: 'bg-red-100 text-red-700',
+                }
+                const statusLabels = { open: 'Abierta', agreed: 'Acordada', rejected: 'Rechazada' }
+                return (
+                  <div key={neg.id} className="card p-4 flex gap-4 items-center">
+                    <Link to={`/products/${neg.product_id}`} className="w-14 h-14 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                      {neg.product_images?.[0] && (
+                        <img src={imgUrl(neg.product_images[0])} alt="" className="w-full h-full object-cover"
+                          onError={e => { e.target.style.display = 'none' }} />
+                      )}
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{neg.product_title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        <span className="font-medium">{isBuyer ? 'Comprando a' : 'Vendiendo a'}</span> @{counterpart}
+                      </p>
+                      {neg.agreed_price && (
+                        <p className="text-xs text-green-600 mt-0.5">Precio acordado: ${Number(neg.agreed_price).toLocaleString()}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[neg.status] || 'bg-gray-100 text-gray-600'}`}>
+                        {statusLabels[neg.status] || neg.status}
+                      </span>
+                      <Link to={`/negotiations/${neg.id}`} className="btn-primary text-xs py-1 px-3">
+                        {neg.status === 'open' ? 'Abrir chat' : 'Ver chat'}
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
 

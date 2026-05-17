@@ -16,6 +16,10 @@ api.interceptors.response.use(r => r, err => {
   return Promise.reject(err)
 })
 
-export const imgUrl = (path) => path ? `/${path}` : null
+export const imgUrl = (path) => {
+  if (!path) return null
+  const normalized = path.replace(/\\/g, '/')
+  return normalized.startsWith('/') ? normalized : `/${normalized}`
+}
 
 export default api

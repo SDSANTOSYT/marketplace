@@ -54,6 +54,7 @@ export default function Navbar() {
                     {menuOpen && (
                       <div className="absolute right-0 mt-1 w-48 card shadow-lg py-1 z-50" onClick={() => setMenuOpen(false)}>
                         <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-gray-50">Mi perfil</Link>
+                        <Link to="/profile?tab=negotiations" className="block px-4 py-2 text-sm hover:bg-gray-50">Mis chats</Link>
                         <Link to="/outfits" className="block px-4 py-2 text-sm hover:bg-gray-50">Mis outfits</Link>
                         <Link to="/sell" className="block px-4 py-2 text-sm hover:bg-gray-50 sm:hidden">+ Vender</Link>
                         <hr className="my-1" />
