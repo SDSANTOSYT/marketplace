@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import api, { imgUrl } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useWishlist } from '../context/WishlistContext'
 import StarRating from '../components/StarRating'
 import Modal from '../components/Modal'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const { user } = useAuth()
+  const { isWishlisted, toggle: toggleWishlistCtx } = useWishlist()
   const navigate = useNavigate()
   const [product, setProduct] = useState(null)
   const [comments, setComments] = useState([])
@@ -15,7 +17,6 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
   const [outfits, setOutfits] = useState([])
-  const [inWishlist, setInWishlist] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [replyTo, setReplyTo] = useState(null)
   const [showOutfitModal, setShowOutfitModal] = useState(false)
@@ -24,17 +25,18 @@ export default function ProductDetail() {
   const [addedCart, setAddedCart] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  // El estado de wishlist viene del contexto global — siempre sincronizado
+  const inWishlist = isWishlisted(id)
+
   useEffect(() => {
     async function load() {
       try {
-        const [prodRes, commRes] = await Promise.all([api.get(`/products/${id}`), api.get(`/comments/${id}`)])
+        const requests = [api.get(`/products/${id}`), api.get(`/comments/${id}`)]
+        if (user) requests.push(api.get('/outfits'))
+        const [prodRes, commRes, outfitRes] = await Promise.all(requests)
         setProduct(prodRes.data)
         setComments(commRes.data)
-        if (user) {
-          const [wlRes, outfitRes] = await Promise.all([api.get(`/wishlist/check/${id}`), api.get('/outfits')])
-          setInWishlist(wlRes.data.inWishlist)
-          setOutfits(outfitRes.data)
-        }
+        if (outfitRes) setOutfits(outfitRes.data)
       } catch { navigate('/') }
       finally { setLoading(false) }
     }
@@ -62,8 +64,7 @@ export default function ProductDetail() {
 
   const toggleWishlist = async () => {
     if (!user) return navigate('/')
-    if (inWishlist) { await api.delete(`/wishlist/${product.id}`); setInWishlist(false) }
-    else { await api.post('/wishlist', { product_id: product.id }); setInWishlist(true) }
+    await toggleWishlistCtx(product.id)
   }
 
   const submitComment = async (e) => {
@@ -100,24 +101,30 @@ export default function ProductDetail() {
   const isOwner = user?.id === product.seller_id
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Images */}
-        <div className="space-y-3">
-          <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden">
+    <div className="max-w-[1440px] mx-auto px-margin-desktop py-xl">
+      <div className="grid lg:grid-cols-12 gap-xl">
+        {/* Images - 7 cols */}
+        <div className="lg:col-span-7 space-y-sm">
+          <div className="aspect-[4/5] rounded-lg overflow-hidden bg-surface-container relative">
             {product.images[selectedImg] ? (
               <img src={imgUrl(product.images[selectedImg])} alt={product.title} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300">
-                <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="material-symbols-outlined text-on-surface-variant/30 text-8xl">checkroom</span>
               </div>
             )}
+            <button onClick={toggleWishlist} className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-md rounded-full shadow-sm hover:bg-white active:scale-90 transition-all">
+              <span className={`material-symbols-outlined text-[22px] ${inWishlist ? 'text-primary' : 'text-on-surface-variant'}`}
+                style={inWishlist ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                favorite
+              </span>
+            </button>
           </div>
           {product.images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="grid grid-cols-5 gap-sm">
               {product.images.map((img, i) => (
                 <button key={i} onClick={() => setSelectedImg(i)}
-                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 ${i === selectedImg ? 'border-primary' : 'border-transparent'}`}>
+                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${i === selectedImg ? 'border-primary' : 'border-transparent hover:border-outline-variant'}`}>
                   <img src={imgUrl(img)} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
@@ -125,32 +132,27 @@ export default function ProductDetail() {
           )}
         </div>
 
-        {/* Info */}
-        <div className="space-y-4">
+        {/* Info - 5 cols */}
+        <div className="lg:col-span-5 space-y-lg">
           <div>
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-2xl font-bold leading-tight">{product.title}</h1>
-              <button onClick={toggleWishlist} className="shrink-0 p-2 border rounded-full hover:border-red-300">
-                <svg className={`w-5 h-5 ${inWishlist ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} fill={inWishlist ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
-            </div>
-            <p className="text-gray-500 text-sm mt-1">{product.category}</p>
-            <span className={product.condition === 'new' ? 'badge-new mt-2' : 'badge-used mt-2'}>
+            <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">{product.category}</p>
+            <h1 className="font-display-lg text-display-lg text-on-surface leading-tight mb-sm">{product.title}</h1>
+            <span className={`inline-block text-[10px] uppercase font-bold px-2 py-1 rounded-sm ${
+              product.condition === 'new' ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant'
+            }`}>
               {product.condition === 'new' ? 'Nuevo' : 'Usado'}
             </span>
           </div>
 
-          <div className="text-3xl font-bold text-primary">${Number(product.price).toLocaleString()}</div>
+          <div className="font-headline-md text-headline-md text-primary">${Number(product.price).toLocaleString()}</div>
 
           {/* Seller */}
-          <Link to={`/users/${product.seller_id}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100">
-            <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+          <Link to={`/users/${product.seller_id}`} className="flex items-center gap-md p-md bg-surface-container-low rounded-lg hover:bg-surface-container transition-colors">
+            <div className="w-10 h-10 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-sm shrink-0">
               {product.seller?.username?.[0]?.toUpperCase()}
             </div>
             <div>
-              <p className="font-medium text-sm">@{product.seller?.username}</p>
+              <p className="font-label-lg text-label-lg text-on-surface">@{product.seller?.username}</p>
               <StarRating rating={product.sellerRating} size="sm" />
             </div>
           </Link>
@@ -158,11 +160,13 @@ export default function ProductDetail() {
           {/* Sizes */}
           {product.sizes?.length > 0 && (
             <div>
-              <label className="text-sm font-medium block mb-2">Talla</label>
-              <div className="flex gap-2 flex-wrap">
+              <label className="font-label-lg text-label-lg text-on-surface block mb-sm">Talla</label>
+              <div className="flex gap-sm flex-wrap">
                 {product.sizes.map(s => (
                   <button key={s} onClick={() => setSelectedSize(s === selectedSize ? '' : s)}
-                    className={`px-3 py-1.5 border rounded-lg text-sm font-medium transition-colors ${selectedSize === s ? 'border-primary bg-primary-light text-primary' : 'hover:border-gray-400'}`}>{s}</button>
+                    className={`px-md py-xs border-2 rounded-lg font-label-lg text-label-lg transition-colors ${
+                      selectedSize === s ? 'border-secondary bg-secondary-fixed text-secondary' : 'border-outline-variant text-on-surface-variant hover:border-outline'
+                    }`}>{s}</button>
                 ))}
               </div>
             </div>
@@ -171,128 +175,139 @@ export default function ProductDetail() {
           {/* Colors */}
           {product.colors?.length > 0 && (
             <div>
-              <label className="text-sm font-medium block mb-2">Color/Variante</label>
-              <div className="flex gap-2 flex-wrap">
+              <label className="font-label-lg text-label-lg text-on-surface block mb-sm">Color/Variante</label>
+              <div className="flex gap-sm flex-wrap">
                 {product.colors.map(c => (
                   <button key={c} onClick={() => setSelectedColor(c === selectedColor ? '' : c)}
-                    className={`px-3 py-1.5 border rounded-lg text-sm font-medium transition-colors ${selectedColor === c ? 'border-primary bg-primary-light text-primary' : 'hover:border-gray-400'}`}>{c}</button>
+                    className={`px-md py-xs border-2 rounded-lg font-label-lg text-label-lg transition-colors ${
+                      selectedColor === c ? 'border-secondary bg-secondary-fixed text-secondary' : 'border-outline-variant text-on-surface-variant hover:border-outline'
+                    }`}>{c}</button>
                 ))}
               </div>
             </div>
           )}
 
-          <p className="text-sm text-gray-500">Stock disponible: {product.quantity} unidades</p>
+          <p className="font-label-sm text-label-sm text-on-surface-variant">Stock disponible: {product.quantity} unidades</p>
 
           {/* Actions */}
           {!isOwner && (
-            <div className="space-y-3">
+            <div className="space-y-sm">
               <button onClick={addToCart} disabled={adding || product.quantity === 0}
-                className="btn-primary w-full py-3 text-base">
-                {addedCart ? '✓ Agregado al carrito' : adding ? 'Agregando...' : product.quantity === 0 ? 'Sin stock' : 'Agregar al carrito'}
+                className="bg-primary text-on-primary w-full py-md rounded-lg font-label-lg shadow hover:opacity-90 active:scale-95 transition-all disabled:opacity-50">
+                {addedCart ? '✓ Agregado al carrito' : adding ? 'Agregando...' : product.quantity === 0 ? 'Sin stock' : 'Comprar ahora'}
               </button>
               {product.condition === 'used' && (
-                <button onClick={negotiate} className="btn-outline w-full py-3 text-base">
-                  💬 Negociar precio
+                <button onClick={negotiate} className="w-full py-md rounded-lg border-2 border-secondary text-secondary font-label-lg hover:bg-secondary-fixed active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">chat</span>
+                  Negociar precio
                 </button>
               )}
               {user && (
-                <button onClick={() => setShowOutfitModal(true)} className="btn-ghost w-full border border-gray-200">
-                  👗 Agregar a un Outfit
+                <button onClick={() => setShowOutfitModal(true)} className="w-full py-sm rounded-lg font-label-lg text-on-surface-variant border border-outline-variant/50 hover:bg-surface-container transition-all flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">style</span>
+                  Agregar a un Outfit
                 </button>
               )}
             </div>
           )}
           {isOwner && (
-            <div className="flex gap-3">
-              <Link to={`/profile/edit-product/${product.id}`} className="btn-outline flex-1">Editar</Link>
-              <button onClick={async () => { if (confirm('¿Eliminar producto?')) { await api.delete(`/products/${id}`); navigate('/profile') } }} className="btn-danger flex-1">Eliminar</button>
+            <div className="flex gap-md">
+              <Link to={`/profile/edit-product/${product.id}`} className="border-2 border-secondary text-secondary flex-1 py-sm rounded-lg font-label-lg text-center hover:bg-secondary-fixed transition-all">Editar</Link>
+              <button onClick={async () => { if (confirm('¿Eliminar producto?')) { await api.delete(`/products/${id}`); navigate('/profile') } }}
+                className="bg-error text-on-error flex-1 py-sm rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all">Eliminar</button>
             </div>
           )}
 
           {product.description && (
-            <div>
-              <h3 className="font-semibold mb-2">Descripción</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">{product.description}</p>
+            <div className="border-t border-outline-variant/20 pt-lg">
+              <h3 className="font-label-lg text-label-lg text-on-surface mb-sm">Descripción</h3>
+              <p className="font-body-md text-on-surface-variant leading-relaxed">{product.description}</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Comments */}
-      <div className="mt-10">
-        <h2 className="text-xl font-bold mb-4">Preguntas y comentarios</h2>
+      <div className="mt-xl">
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-lg">Preguntas y comentarios ({comments.length})</h2>
         {user && (
-          <form onSubmit={submitComment} className="mb-6">
+          <form onSubmit={submitComment} className="mb-lg">
             {replyTo && (
-              <div className="flex items-center gap-2 mb-2 text-sm text-gray-500">
-                Respondiendo a un comentario <button type="button" onClick={() => setReplyTo(null)} className="text-red-500 hover:underline">cancelar</button>
+              <div className="flex items-center gap-sm mb-sm font-label-sm text-on-surface-variant">
+                Respondiendo a un comentario
+                <button type="button" onClick={() => setReplyTo(null)} className="text-error hover:underline">cancelar</button>
               </div>
             )}
-            <div className="flex gap-3">
-              <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold shrink-0">
+            <div className="flex gap-md">
+              <div className="w-9 h-9 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-sm shrink-0">
                 {user.username[0].toUpperCase()}
               </div>
-              <div className="flex-1 flex gap-2">
-                <input value={commentText} onChange={e => setCommentText(e.target.value)} placeholder={replyTo ? 'Escribe una respuesta...' : 'Escribe tu pregunta o comentario...'}
+              <div className="flex-1 flex gap-sm">
+                <input value={commentText} onChange={e => setCommentText(e.target.value)}
+                  placeholder={replyTo ? 'Escribe una respuesta...' : 'Escribe tu pregunta o comentario...'}
                   className="input flex-1" />
-                <button type="submit" className="btn-primary">Enviar</button>
+                <button type="submit" className="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all">Enviar</button>
               </div>
             </div>
           </form>
         )}
-        <div className="space-y-4">
+        <div className="space-y-lg">
           {comments.map(c => (
-            <div key={c.id} className="space-y-3">
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold shrink-0">
+            <div key={c.id} className="space-y-md">
+              <div className="flex gap-md">
+                <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-label-lg text-on-surface-variant shrink-0">
                   {c.username?.[0]?.toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{c.username}</span>
-                    {c.user_id === product.seller_id && <span className="badge bg-primary-light text-primary">Vendedor</span>}
-                    <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString('es')}</span>
+                  <div className="flex items-center gap-sm">
+                    <span className="font-label-lg text-label-lg text-on-surface">{c.username}</span>
+                    {c.user_id === product.seller_id && (
+                      <span className="bg-primary-fixed text-on-primary-fixed px-2 py-0.5 rounded-full font-label-sm text-label-sm">Vendedor</span>
+                    )}
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">{new Date(c.created_at).toLocaleDateString('es')}</span>
                   </div>
-                  <p className="text-sm text-gray-700 mt-0.5">{c.content}</p>
-                  {user && <button onClick={() => setReplyTo(c.id)} className="text-xs text-primary hover:underline mt-1">Responder</button>}
+                  <p className="font-body-md text-on-surface mt-0.5">{c.content}</p>
+                  {user && <button onClick={() => setReplyTo(c.id)} className="font-label-sm text-label-sm text-primary hover:underline mt-1">Responder</button>}
                 </div>
               </div>
               {c.replies?.map(r => (
-                <div key={r.id} className="ml-11 flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold shrink-0">
+                <div key={r.id} className="ml-11 flex gap-md">
+                  <div className="w-7 h-7 rounded-full bg-surface-container-low flex items-center justify-center font-label-sm text-on-surface-variant shrink-0">
                     {r.username?.[0]?.toUpperCase()}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-xs">{r.username}</span>
-                      {r.user_id === product.seller_id && <span className="badge bg-primary-light text-primary text-xs">Vendedor</span>}
+                    <div className="flex items-center gap-sm">
+                      <span className="font-label-lg text-label-lg text-on-surface">{r.username}</span>
+                      {r.user_id === product.seller_id && (
+                        <span className="bg-primary-fixed text-on-primary-fixed px-2 py-0.5 rounded-full font-label-sm text-label-sm">Vendedor</span>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-700">{r.content}</p>
+                    <p className="font-body-md text-on-surface">{r.content}</p>
                   </div>
                 </div>
               ))}
             </div>
           ))}
-          {comments.length === 0 && <p className="text-gray-500 text-sm">Sé el primero en preguntar.</p>}
+          {comments.length === 0 && <p className="font-body-md text-on-surface-variant">Sé el primero en preguntar.</p>}
         </div>
       </div>
 
       {/* Outfit modal */}
       {showOutfitModal && (
         <Modal onClose={() => setShowOutfitModal(false)} title="Agregar a outfit" size="sm">
-          <div className="space-y-3">
+          <div className="space-y-sm">
             {outfits.map(o => (
               <button key={o.id} onClick={() => addToOutfit(o.id)}
-                className="w-full text-left p-3 border rounded-lg hover:border-primary hover:bg-primary-light transition-colors">
-                <p className="font-medium">{o.name}</p>
-                <p className="text-xs text-gray-500">{o.items?.length || 0} prendas</p>
+                className="w-full text-left p-md border border-outline-variant/30 rounded-lg hover:border-primary hover:bg-primary-fixed/20 transition-colors">
+                <p className="font-label-lg text-label-lg text-on-surface">{o.name}</p>
+                <p className="font-label-sm text-label-sm text-on-surface-variant">{o.items?.length || 0} prendas</p>
               </button>
             ))}
-            <div className="border-t pt-3">
-              <p className="text-sm font-medium mb-2">Crear nuevo outfit</p>
-              <div className="flex gap-2">
-                <input value={newOutfitName} onChange={e => setNewOutfitName(e.target.value)} placeholder="Nombre del outfit" className="input text-sm flex-1" />
-                <button onClick={createAndAddOutfit} className="btn-primary text-sm">Crear</button>
+            <div className="border-t border-outline-variant/20 pt-md">
+              <p className="font-label-lg text-label-lg text-on-surface mb-sm">Crear nuevo outfit</p>
+              <div className="flex gap-sm">
+                <input value={newOutfitName} onChange={e => setNewOutfitName(e.target.value)} placeholder="Nombre del outfit" className="input flex-1" />
+                <button onClick={createAndAddOutfit} className="bg-primary text-on-primary px-md py-sm rounded-lg font-label-lg hover:opacity-90 transition-all">Crear</button>
               </div>
             </div>
           </div>

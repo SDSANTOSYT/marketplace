@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { getDb } = require('../database');
 const { auth } = require('../middleware/auth');
+const { createNotification } = require('./notifications');
 
 router.get('/', auth, (req, res) => {
   const db = getDb();
@@ -81,6 +82,21 @@ router.post('/:id/messages', auth, (req, res) => {
   }
   
   req.io?.to(`neg-${req.params.id}`).emit('message', msg);
+
+  // Notificar al otro participante
+  const recipientId = req.user.id === n.buyer_id ? n.seller_id : n.buyer_id;
+  const senderRow = db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
+  const notifBody = proposed_price
+    ? `@${senderRow?.username} propuso $${Number(proposed_price).toLocaleString()}`
+    : `@${senderRow?.username} te envió un mensaje`;
+  createNotification(db, req.io, {
+    userId: recipientId,
+    type: 'new_message',
+    title: 'Nuevo mensaje en negociación',
+    body: notifBody,
+    relatedId: n.id,
+  });
+
   res.json(msg);
 });
 

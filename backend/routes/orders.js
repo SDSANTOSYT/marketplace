@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { getDb } = require('../database');
 const { auth } = require('../middleware/auth');
+const { createNotification } = require('./notifications');
 
 router.get('/', auth, (req, res) => {
   const db = getDb();
@@ -50,6 +51,13 @@ router.post('/', auth, (req, res) => {
 
   if (!cartItems.length) return res.status(400).json({ error: 'El carrito está vacío' });
 
+  // Validar stock antes de procesar
+  for (const item of cartItems) {
+    if (item.quantity > item.stock) {
+      return res.status(400).json({ error: `"${item.title}" solo tiene ${item.stock} unidad${item.stock === 1 ? '' : 'es'} disponible${item.stock === 1 ? '' : 's'}` });
+    }
+  }
+
   const total = cartItems.reduce((sum, i) => {
     const price = (i.negotiated_price && new Date(i.negotiation_expires_at) > new Date()) ? i.negotiated_price : i.price;
     return sum + price * i.quantity;
@@ -70,7 +78,20 @@ router.post('/', auth, (req, res) => {
         'INSERT INTO order_items (order_id, product_id, seller_id, title, image, quantity, price, size, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ).run(orderId, item.product_id, item.seller_id, item.title, images[0] || null, item.quantity, price, item.size || null, item.color || null);
 
+      // Reducir stock
       db.prepare('UPDATE products SET quantity = MAX(0, quantity - ?) WHERE id = ?').run(item.quantity, item.product_id);
+
+      // Notificar al vendedor si el producto se queda sin stock
+      const updatedProduct = db.prepare('SELECT quantity FROM products WHERE id = ?').get(item.product_id);
+      if (updatedProduct && updatedProduct.quantity === 0) {
+        createNotification(db, req.io, {
+          userId: item.seller_id,
+          type: 'out_of_stock',
+          title: 'Producto sin stock',
+          body: `"${item.title}" se agotó. Actualiza tu inventario para seguir vendiendo.`,
+          relatedId: item.product_id,
+        });
+      }
     }
 
     db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
@@ -78,10 +99,29 @@ router.post('/', auth, (req, res) => {
   });
 
   const orderId = createOrder();
+
+  // Notificar a cada vendedor sobre la nueva venta
+  const sellerMap = {};
+  for (const item of cartItems) {
+    if (!sellerMap[item.seller_id]) sellerMap[item.seller_id] = [];
+    sellerMap[item.seller_id].push(item.title);
+  }
+  for (const [sellerId, titles] of Object.entries(sellerMap)) {
+    createNotification(db, req.io, {
+      userId: Number(sellerId),
+      type: 'new_sale',
+      title: '¡Nueva venta!',
+      body: titles.length === 1
+        ? `Vendiste "${titles[0]}"`
+        : `Vendiste ${titles.length} productos`,
+      relatedId: orderId,
+    });
+  }
+
   res.json({ id: orderId });
 });
 
-// Seller adds tracking
+// Vendedor agrega tracking
 router.put('/items/:id/tracking', auth, (req, res) => {
   const { tracking_number, carrier } = req.body;
   if (!tracking_number || !carrier) return res.status(400).json({ error: 'Número de rastreo y empresa requeridos' });
@@ -89,10 +129,23 @@ router.put('/items/:id/tracking', auth, (req, res) => {
   const item = db.prepare('SELECT * FROM order_items WHERE id = ? AND seller_id = ?').get(req.params.id, req.user.id);
   if (!item) return res.status(404).json({ error: 'Item no encontrado' });
   db.prepare('UPDATE order_items SET tracking_number = ?, carrier = ?, status = ? WHERE id = ?').run(tracking_number, carrier, 'shipped', req.params.id);
+
+  // Notificar al comprador que su pedido fue enviado
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(item.order_id);
+  if (order) {
+    createNotification(db, req.io, {
+      userId: order.buyer_id,
+      type: 'order_shipped',
+      title: 'Tu pedido fue enviado',
+      body: `"${item.title}" está en camino. Rastreo: ${tracking_number} (${carrier})`,
+      relatedId: item.order_id,
+    });
+  }
+
   res.json({ ok: true });
 });
 
-// Buyer marks as received
+// Comprador marca como recibido
 router.put('/items/:id/received', auth, (req, res) => {
   const db = getDb();
   const item = db.prepare(`
@@ -105,7 +158,7 @@ router.put('/items/:id/received', auth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Leave review
+// Dejar reseña
 router.post('/items/:id/review', auth, (req, res) => {
   const { rating, content } = req.body;
   if (rating === undefined || rating < 0 || rating > 5) return res.status(400).json({ error: 'Calificación entre 0 y 5' });
@@ -118,6 +171,18 @@ router.post('/items/:id/review', auth, (req, res) => {
   if (!item) return res.status(404).json({ error: 'Solo puedes reseñar items recibidos' });
   try {
     db.prepare('INSERT INTO reviews (order_item_id, buyer_id, seller_id, rating, content) VALUES (?, ?, ?, ?, ?)').run(item.id, req.user.id, item.seller_id, rating, content || null);
+
+    // Notificar al vendedor sobre la nueva reseña
+    const reviewer = db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
+    const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+    createNotification(db, req.io, {
+      userId: item.seller_id,
+      type: 'new_review',
+      title: 'Nueva reseña recibida',
+      body: `@${reviewer?.username} te calificó con ${stars} — "${item.title}"`,
+      relatedId: item.id,
+    });
+
     res.json({ ok: true });
   } catch {
     res.status(409).json({ error: 'Ya dejaste una reseña para este item' });

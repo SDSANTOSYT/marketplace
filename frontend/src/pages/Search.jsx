@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
 import ProductCard from '../components/ProductCard'
 
-const CATEGORIES = ['Parte superior','Suéter','Parte inferior','Pantalón','Calzado','Accesorio','Vestido','Abrigo']
+// Categorías canónicas — sin duplicados
+const CATEGORIES = ['Parte superior', 'Suéter', 'Pantalón', 'Calzado', 'Accesorio', 'Vestido', 'Abrigo']
 
 export default function Search() {
   const [params, setParams] = useSearchParams()
@@ -50,26 +51,26 @@ export default function Search() {
   }, [filters])
 
   return (
-    <div className="flex gap-6">
+    <div className="max-w-7xl mx-auto px-margin-desktop py-xl flex gap-xl">
       {/* Sidebar filters */}
-      <aside className="hidden md:block w-56 shrink-0 space-y-6">
-        <div className="card p-4 space-y-4">
-          <h3 className="font-semibold">Filtros</h3>
+      <aside className="hidden md:block w-64 shrink-0">
+        <div className="bg-surface-container-lowest rounded-lg p-lg border border-outline-variant/20 space-y-lg sticky top-24">
+          <h3 className="font-headline-sm text-headline-sm text-on-surface">Filtros</h3>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Categoría</label>
-            <div className="space-y-1">
-              <button onClick={() => setF('category', '')} className={`block w-full text-left text-sm px-2 py-1 rounded ${!filters.category ? 'text-primary font-medium' : 'text-gray-600 hover:bg-gray-50'}`}>Todas</button>
+            <label className="font-label-lg text-label-lg text-on-surface block mb-sm">Categoría</label>
+            <div className="space-y-0.5">
+              <button onClick={() => setF('category', '')} className={`block w-full text-left px-sm py-xs rounded-lg font-label-lg text-label-lg transition-colors ${!filters.category ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container hover:text-primary'}`}>Todas</button>
               {CATEGORIES.map(c => (
-                <button key={c} onClick={() => setF('category', c)} className={`block w-full text-left text-sm px-2 py-1 rounded ${filters.category === c ? 'text-primary font-medium' : 'text-gray-600 hover:bg-gray-50'}`}>{c}</button>
+                <button key={c} onClick={() => setF('category', c)} className={`block w-full text-left px-sm py-xs rounded-lg font-label-lg text-label-lg transition-colors ${filters.category === c ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container hover:text-primary'}`}>{c}</button>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Estado</label>
+            <label className="font-label-lg text-label-lg text-on-surface block mb-sm">Estado</label>
             {[['', 'Todos'], ['new', 'Nuevo'], ['used', 'Usado']].map(([val, label]) => (
-              <label key={val} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
+              <label key={val} className="flex items-center gap-sm font-body-md text-on-surface-variant py-1 cursor-pointer">
                 <input type="radio" name="condition" checked={filters.condition === val} onChange={() => setF('condition', val)} />
                 {label}
               </label>
@@ -77,10 +78,10 @@ export default function Search() {
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Precio</label>
-            <div className="flex gap-2">
-              <input placeholder="Mín" type="number" value={filters.minPrice} onChange={e => setF('minPrice', e.target.value)} className="input text-xs" />
-              <input placeholder="Máx" type="number" value={filters.maxPrice} onChange={e => setF('maxPrice', e.target.value)} className="input text-xs" />
+            <label className="font-label-lg text-label-lg text-on-surface block mb-sm">Precio</label>
+            <div className="flex gap-sm">
+              <input placeholder="Mín" type="number" value={filters.minPrice} onChange={e => setF('minPrice', e.target.value)} className="input" />
+              <input placeholder="Máx" type="number" value={filters.maxPrice} onChange={e => setF('maxPrice', e.target.value)} className="input" />
             </div>
           </div>
         </div>
@@ -88,10 +89,10 @@ export default function Search() {
 
       {/* Results */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold">
+        <div className="flex items-center justify-between mb-lg">
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">
             {filters.q ? `"${filters.q}"` : filters.category || 'Todos los productos'}
-            <span className="text-gray-500 font-normal ml-2 text-sm">({total} resultados)</span>
+            <span className="font-body-md text-on-surface-variant ml-sm">({total} resultados)</span>
           </h2>
         </div>
 
@@ -100,21 +101,21 @@ export default function Search() {
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            <p className="text-4xl mb-3">🔍</p>
-            <p className="text-lg font-medium">No se encontraron productos</p>
-            <p className="text-sm mt-1">Prueba con otros filtros o términos</p>
+          <div className="text-center py-20">
+            <span className="material-symbols-outlined text-on-surface-variant/30 text-7xl">search</span>
+            <p className="font-headline-sm text-headline-sm text-on-surface mt-lg">No se encontraron productos</p>
+            <p className="font-body-md text-on-surface-variant mt-sm">Prueba con otros filtros o términos</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-gutter">
               {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
             {pages > 1 && (
-              <div className="flex justify-center gap-2 mt-8">
+              <div className="flex justify-center gap-sm mt-xl">
                 {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
                   <button key={p} onClick={() => setFilters(f => ({ ...f, page: p }))}
-                    className={`w-9 h-9 rounded-lg text-sm font-medium ${filters.page === p ? 'bg-primary text-white' : 'border hover:bg-gray-50'}`}>{p}</button>
+                    className={`w-9 h-9 rounded-lg font-label-lg transition-colors ${filters.page === p ? 'bg-primary text-on-primary' : 'border border-outline-variant text-on-surface-variant hover:bg-surface-container'}`}>{p}</button>
                 ))}
               </div>
             )}

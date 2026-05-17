@@ -17,20 +17,23 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use((req, _res, next) => { req.io = io; next(); });
 
-app.use('/api/auth',         require('./routes/auth'));
-app.use('/api/users',        require('./routes/users'));
-app.use('/api/products',     require('./routes/products'));
-app.use('/api/cart',         require('./routes/cart'));
-app.use('/api/orders',       require('./routes/orders'));
-app.use('/api/wishlist',     require('./routes/wishlist'));
-app.use('/api/outfits',      require('./routes/outfits'));
-app.use('/api/negotiations', require('./routes/negotiations'));
-app.use('/api/comments',     require('./routes/comments'));
-app.use('/api/ai',           require('./routes/ai'));
+app.use('/api/auth',          require('./routes/auth'));
+app.use('/api/users',         require('./routes/users'));
+app.use('/api/products',      require('./routes/products'));
+app.use('/api/cart',          require('./routes/cart'));
+app.use('/api/orders',        require('./routes/orders'));
+app.use('/api/wishlist',      require('./routes/wishlist'));
+app.use('/api/outfits',       require('./routes/outfits'));
+app.use('/api/negotiations',  require('./routes/negotiations'));
+app.use('/api/comments',      require('./routes/comments'));
+app.use('/api/ai',            require('./routes/ai'));
+app.use('/api/notifications', require('./routes/notifications').router);
 
 io.on('connection', (socket) => {
-  socket.on('join-negotiation',  (id) => socket.join(`neg-${id}`));
-  socket.on('leave-negotiation', (id) => socket.leave(`neg-${id}`));
+  socket.on('join-negotiation',  (id)     => socket.join(`neg-${id}`));
+  socket.on('leave-negotiation', (id)     => socket.leave(`neg-${id}`));
+  socket.on('join-user',         (userId) => socket.join(`user-${userId}`));
+  socket.on('leave-user',        (userId) => socket.leave(`user-${userId}`));
 });
 
 getDb();

@@ -85,192 +85,210 @@ export default function Negotiation() {
   const buyerProposedPrice = neg.buyer_proposed_price
   const sellerProposedPrice = neg.seller_proposed_price
   const latestOtherProposal = isBuyer ? sellerProposedPrice : buyerProposedPrice
+  const counterpartName = isBuyer ? neg.seller_username : neg.buyer_username
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Product header */}
-      <div className="card p-4 mb-4 flex gap-4">
-        <Link to={`/products/${neg.product_id}`} className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-          {neg.product_images?.[0] && (
-              <img src={imgUrl(neg.product_images[0])} alt="" className="w-full h-full object-cover"
-                onError={e => { e.target.style.display = 'none' }} />
-            )}
-        </Link>
-        <div className="flex-1">
-          <Link to={`/products/${neg.product_id}`} className="font-semibold hover:text-primary">{neg.product_title}</Link>
-          <p className="text-sm text-gray-500">Precio original: <span className="font-medium">${Number(neg.original_price).toLocaleString()}</span></p>
-           {neg.status === 'agreed' && (
-             <div className="mt-1">
-               <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                 ✓ Precio acordado: ${Number(neg.agreed_price).toLocaleString()} · expira {new Date(neg.expires_at).toLocaleDateString('es')}
-               </span>
-             </div>
-           )}
-           {isOpen && (buyerProposedPrice || sellerProposedPrice) && (
-             <div className="mt-2 space-y-1">
-               {buyerProposedPrice && (
-                 <p className="text-xs text-gray-600">Comprador propone: <span className="font-semibold text-primary">${Number(buyerProposedPrice).toLocaleString()}</span></p>
-               )}
-               {sellerProposedPrice && (
-                 <p className="text-xs text-gray-600">Vendedor propone: <span className="font-semibold text-primary">${Number(sellerProposedPrice).toLocaleString()}</span></p>
-               )}
-             </div>
-           )}
-          {neg.status === 'rejected' && (
-            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1 inline-block">Negociación rechazada</span>
-          )}
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-xs text-gray-400">{isBuyer ? 'Vendedor' : 'Comprador'}</p>
-          <p className="font-medium text-sm">@{isBuyer ? neg.seller_username : neg.buyer_username}</p>
-          <p className="text-xs text-gray-400 mt-1">{isSeller ? 'Tú vendes' : 'Tú compras'}</p>
-        </div>
-      </div>
-
-      {/* Chat */}
-      <div className="card flex flex-col" style={{ height: '500px' }}>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.map((msg, i) => {
-            const isMe = msg.sender_id === user?.id
-            return (
-              <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-xs ${isMe ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
-                  {!isMe && <span className="text-xs text-gray-400 ml-1">@{msg.username}</span>}
-                  <div className={`px-4 py-2.5 rounded-2xl text-sm ${isMe ? 'bg-primary text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
-                    {msg.message && <p>{msg.message}</p>}
-                    {msg.proposed_price && (
-                      <div className={`mt-1 px-3 py-1.5 rounded-lg text-sm font-semibold ${isMe ? 'bg-white/20' : 'bg-primary-light text-primary'}`}>
-                        💰 Precio propuesto: ${Number(msg.proposed_price).toLocaleString()}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-400 px-1">{new Date(msg.created_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
+    <div className="max-w-[1440px] mx-auto px-margin-desktop py-lg">
+      <div className="flex flex-col md:flex-row gap-lg h-[calc(100vh-140px)]">
+        {/* LEFT: Chat window */}
+        <div className="flex-grow flex flex-col bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-sm overflow-hidden">
+          {/* Chat Header */}
+          <div className="flex items-center justify-between px-lg py-md border-b border-outline-variant/20">
+            <div className="flex items-center gap-md">
+              <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm shrink-0">
+                {counterpartName?.[0]?.toUpperCase()}
               </div>
-            )
-          })}
-          {messages.length === 0 && (
-            <div className="text-center text-gray-400 text-sm py-8">
-              {isBuyer ? 'Inicia la conversación para negociar el precio' : 'El comprador aún no ha enviado mensajes'}
+              <div>
+                <p className="font-label-lg text-label-lg text-on-surface">@{counterpartName}</p>
+                <p className="font-label-sm text-label-sm text-on-surface-variant">{isBuyer ? 'Vendedor' : 'Comprador'}</p>
+              </div>
             </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
+            <Link to={`/products/${neg.product_id}`} className="font-label-sm text-label-sm text-primary hover:underline">
+              Ver producto
+            </Link>
+          </div>
 
-        {/* Input */}
-        {isOpen ? (
-          <div className="border-t p-4 space-y-3">
-            {/* Current proposals - with explicit accept buttons */}
-            {(buyerProposedPrice || sellerProposedPrice) && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Propuestas actuales:</p>
-                {buyerProposedPrice && (
-                  <div className="bg-white p-2 rounded border border-blue-200 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-gray-600">Comprador propone:</p>
-                      <p className="text-lg font-bold text-primary">${Number(buyerProposedPrice).toLocaleString()}</p>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-lg space-y-lg bg-surface-container-low/30">
+            {messages.map((msg, i) => {
+              const isMe = msg.sender_id === user?.id
+              return (
+                <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-xs flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
+                    {!isMe && <span className="font-label-sm text-label-sm text-on-surface-variant ml-1">@{msg.username}</span>}
+                    <div className={`px-md py-sm rounded-xl font-body-md ${
+                      isMe
+                        ? 'bg-primary-container text-on-primary-container rounded-tr-none'
+                        : 'bg-white text-on-surface rounded-tl-none shadow-sm border border-outline-variant/20'
+                    }`}>
+                      {msg.message && <p>{msg.message}</p>}
+                      {msg.proposed_price && (
+                        <div className={`mt-1 px-sm py-1 rounded-lg font-label-lg flex items-center gap-1 ${isMe ? 'bg-white/20' : 'bg-primary-fixed text-on-primary-fixed'}`}>
+                          <span className="material-symbols-outlined text-[16px]">payments</span>
+                          Precio propuesto: ${Number(msg.proposed_price).toLocaleString()}
+                        </div>
+                      )}
                     </div>
-                    {isSeller && !showAgree && (
-                      <button 
-                        onClick={() => { setAgreePrice(buyerProposedPrice); setShowAgree(true); }} 
-                        className="btn-primary text-xs px-3 py-2 whitespace-nowrap"
-                      >
-                        ✓ Aceptar
-                      </button>
-                    )}
+                    <span className="font-label-sm text-label-sm text-on-surface-variant px-1">
+                      {new Date(msg.created_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                )}
-                {sellerProposedPrice && (
-                  <div className="bg-white p-2 rounded border border-blue-200 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-gray-600">Vendedor propone:</p>
-                      <p className="text-lg font-bold text-primary">${Number(sellerProposedPrice).toLocaleString()}</p>
-                    </div>
-                    {isBuyer && !showAgree && (
-                      <button 
-                        onClick={() => { setAgreePrice(sellerProposedPrice); setShowAgree(true); }} 
-                        className="btn-primary text-xs px-3 py-2 whitespace-nowrap"
-                      >
-                        ✓ Aceptar
-                      </button>
-                    )}
-                  </div>
-                )}
+                </div>
+              )
+            })}
+            {messages.length === 0 && (
+              <div className="text-center font-body-md text-on-surface-variant py-8">
+                {isBuyer ? 'Inicia la conversación para negociar el precio' : 'El comprador aún no ha enviado mensajes'}
               </div>
             )}
+            <div ref={bottomRef} />
+          </div>
 
-            {/* Confirmation dialog */}
-            {showAgree && (
-              <div className="bg-green-50 border border-green-300 rounded-lg p-4 space-y-3">
-                <p className="text-sm font-semibold text-gray-800">Confirmar aceptación:</p>
-                <div className="bg-white p-4 rounded border-2 border-green-300 text-center">
-                  <p className="text-gray-600 text-xs mb-1">Precio acordado:</p>
-                  <p className="text-3xl font-bold text-primary">${Number(agreePrice).toLocaleString()}</p>
+          {/* Input area */}
+          {isOpen ? (
+            <div className="bg-surface-container-lowest border-t border-outline-variant/20 p-md space-y-md">
+              {/* Current proposals */}
+              {(buyerProposedPrice || sellerProposedPrice) && (
+                <div className="bg-primary-fixed/30 border border-primary/20 rounded-lg p-md space-y-sm">
+                  <p className="font-label-lg text-label-lg text-on-surface">Propuestas actuales:</p>
+                  {buyerProposedPrice && (
+                    <div className="bg-white p-sm rounded-lg border border-outline-variant/20 flex justify-between items-center">
+                      <div>
+                        <p className="font-label-sm text-label-sm text-on-surface-variant">Comprador propone:</p>
+                        <p className="font-headline-sm text-headline-sm text-primary">${Number(buyerProposedPrice).toLocaleString()}</p>
+                      </div>
+                      {isSeller && !showAgree && (
+                        <button onClick={() => { setAgreePrice(buyerProposedPrice); setShowAgree(true); }}
+                          className="bg-primary text-on-primary px-md py-xs rounded-lg font-label-lg text-label-lg hover:opacity-90 active:scale-95 transition-all whitespace-nowrap">
+                          Aceptar
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {sellerProposedPrice && (
+                    <div className="bg-white p-sm rounded-lg border border-outline-variant/20 flex justify-between items-center">
+                      <div>
+                        <p className="font-label-sm text-label-sm text-on-surface-variant">Vendedor propone:</p>
+                        <p className="font-headline-sm text-headline-sm text-primary">${Number(sellerProposedPrice).toLocaleString()}</p>
+                      </div>
+                      {isBuyer && !showAgree && (
+                        <button onClick={() => { setAgreePrice(sellerProposedPrice); setShowAgree(true); }}
+                          className="bg-primary text-on-primary px-md py-xs rounded-lg font-label-lg text-label-lg hover:opacity-90 active:scale-95 transition-all whitespace-nowrap">
+                          Aceptar
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="text-xs text-gray-600 bg-white p-2 rounded">
-                  Ambos están de acuerdo con este precio y la compra se completará.
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={agree} className="btn-primary flex-1 py-2">✓ Confirmar y Acordar</button>
-                  <button onClick={() => setShowAgree(false)} className="btn-ghost flex-1">Cancelar</button>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Propose new price */}
-            {!showAgree && (
-              <div className="space-y-2 border-t pt-3">
-                <p className="text-xs font-semibold text-gray-700">Proponer precio:</p>
-                <form onSubmit={sendMessage} className="flex gap-2">
-                  <input 
-                    type="number" 
-                    value={proposedPrice} 
-                    onChange={e => setProposedPrice(e.target.value)} 
-                    placeholder="Mi propuesta" 
-                    className="input text-sm flex-1" 
-                  />
-                  <button type="submit" className="btn-primary px-3 py-2" disabled={!proposedPrice}>
-                    📤 Proponer
+              {/* Confirmation dialog */}
+              {showAgree && (
+                <div className="bg-surface-container-low border-2 border-primary/20 rounded-lg p-md space-y-md">
+                  <p className="font-label-lg text-label-lg text-on-surface">Confirmar aceptación:</p>
+                  <div className="bg-white p-md rounded-lg border-2 border-primary/20 text-center">
+                    <p className="font-label-sm text-label-sm text-on-surface-variant mb-1">Precio acordado:</p>
+                    <p className="font-display-lg text-display-lg text-primary">${Number(agreePrice).toLocaleString()}</p>
+                  </div>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant">Ambos están de acuerdo con este precio y la compra se completará.</p>
+                  <div className="flex gap-sm">
+                    <button onClick={agree} className="bg-primary text-on-primary flex-1 py-sm rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all">Confirmar y Acordar</button>
+                    <button onClick={() => setShowAgree(false)} className="border border-outline-variant text-on-surface-variant flex-1 py-sm rounded-lg font-label-lg hover:bg-surface-container transition-all">Cancelar</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Propose new price */}
+              {!showAgree && (
+                <div className="space-y-xs">
+                  <p className="font-label-sm text-label-sm text-on-surface-variant">Proponer precio:</p>
+                  <form onSubmit={sendMessage} className="flex gap-sm">
+                    <input type="number" value={proposedPrice} onChange={e => setProposedPrice(e.target.value)}
+                      placeholder="Mi propuesta" className="input flex-1" />
+                    <button type="submit" className="bg-secondary text-on-secondary px-md py-sm rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50" disabled={!proposedPrice}>
+                      Proponer
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* Messages input */}
+              {!showAgree && (
+                <form onSubmit={sendMessage} className="flex gap-sm">
+                  <input value={input} onChange={e => setInput(e.target.value)}
+                    placeholder="Escribe un mensaje..."
+                    className="pl-lg pr-4 py-sm bg-surface-container-low border border-outline-variant/30 rounded-full flex-1 font-body-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" />
+                  <button type="submit" className="bg-primary text-on-primary rounded-full p-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-50" disabled={!input.trim()}>
+                    <span className="material-symbols-outlined text-[20px]">send</span>
                   </button>
                 </form>
-              </div>
-            )}
+              )}
 
-            {/* Messages */}
-            {!showAgree && (
-              <form onSubmit={sendMessage} className="border-t pt-3">
-                <div className="flex gap-2">
-                  <input 
-                    value={input} 
-                    onChange={e => setInput(e.target.value)} 
-                    placeholder="Escribe un mensaje..." 
-                    className="input flex-1 text-sm" 
-                  />
-                  <button type="submit" className="btn-primary px-3" disabled={!input.trim()}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              {!showAgree && (
+                <div className="border-t border-outline-variant/20 pt-sm">
+                  <button onClick={reject} className="w-full font-label-lg text-label-lg text-error hover:bg-error-container transition-colors py-sm rounded-lg">
+                    Rechazar negociación
                   </button>
                 </div>
-              </form>
-            )}
+              )}
+            </div>
+          ) : (
+            <div className="border-t border-outline-variant/20 p-md text-center">
+              {neg.status === 'agreed' ? (
+                <div>
+                  <p className="font-body-md text-on-surface mb-sm">Precio acordado: <strong className="text-primary">${Number(neg.agreed_price).toLocaleString()}</strong></p>
+                  {isBuyer && <Link to="/cart" className="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-lg hover:opacity-90 transition-all inline-block">Ir al carrito</Link>}
+                  {isSeller && <p className="font-body-md text-on-surface-variant">El comprador tiene el precio en su carrito</p>}
+                </div>
+              ) : <p className="font-body-md text-on-surface-variant">Negociación cerrada</p>}
+            </div>
+          )}
+        </div>
 
-            {/* Reject button */}
-            {!showAgree && (
-              <div className="border-t pt-2 mt-2">
-                <button onClick={reject} className="btn-ghost text-sm text-red-500 w-full">✕ Rechazar negociación</button>
-              </div>
-            )}
+        {/* RIGHT sidebar */}
+        <div className="w-full md:w-[380px] shrink-0 flex flex-col gap-lg">
+          {/* Product card */}
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden">
+            <Link to={`/products/${neg.product_id}`} className="block h-48 overflow-hidden bg-surface-container">
+              {neg.product_images?.[0] && (
+                <img src={imgUrl(neg.product_images[0])} alt="" className="w-full h-full object-cover"
+                  onError={e => { e.target.style.display = 'none' }} />
+              )}
+            </Link>
+            <div className="p-md">
+              <Link to={`/products/${neg.product_id}`} className="font-label-lg text-label-lg text-on-surface hover:text-primary transition-colors block mb-xs">{neg.product_title}</Link>
+              <p className="font-label-sm text-label-sm text-on-surface-variant">Precio original: <span className="font-label-lg text-on-surface">${Number(neg.original_price).toLocaleString()}</span></p>
+              {neg.status === 'agreed' && (
+                <span className="inline-block mt-sm bg-primary-fixed text-on-primary-fixed px-sm py-1 rounded-full font-label-sm text-label-sm">
+                  Acordado: ${Number(neg.agreed_price).toLocaleString()} · expira {new Date(neg.expires_at).toLocaleDateString('es')}
+                </span>
+              )}
+              {neg.status === 'rejected' && (
+                <span className="inline-block mt-sm bg-error-container text-on-error-container px-sm py-1 rounded-full font-label-sm text-label-sm">Negociación rechazada</span>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="border-t p-4 text-center text-sm text-gray-500">
-            {neg.status === 'agreed' ? (
-              <div>
-                <p className="mb-2">Precio acordado: <strong>${Number(neg.agreed_price).toLocaleString()}</strong></p>
-                {isBuyer && <Link to="/cart" className="btn-primary">Ir al carrito</Link>}
-                {isSeller && <p className="text-green-600 font-medium">El comprador tiene el precio en su carrito</p>}
-              </div>
-            ) : 'Negociación cerrada'}
-          </div>
-        )}
+
+          {/* Offer card */}
+          {isOpen && (buyerProposedPrice || sellerProposedPrice) && (
+            <div className="bg-white rounded-xl border-2 border-primary/20 p-lg">
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-sm">OFERTA ACTUAL</p>
+              {buyerProposedPrice && (
+                <div className="mb-sm">
+                  <p className="font-label-sm text-label-sm text-on-surface-variant">Comprador</p>
+                  <p className="font-display-lg text-display-lg text-primary">${Number(buyerProposedPrice).toLocaleString()}</p>
+                </div>
+              )}
+              {sellerProposedPrice && (
+                <div>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant">Vendedor</p>
+                  <p className="font-display-lg text-display-lg text-secondary">${Number(sellerProposedPrice).toLocaleString()}</p>
+                </div>
+              )}
+              <span className="inline-block mt-md bg-surface-container text-on-surface-variant px-sm py-1 rounded-full font-label-sm text-label-sm">Negociando</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

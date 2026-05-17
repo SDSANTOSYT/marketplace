@@ -47,84 +47,86 @@ export default function Outfits() {
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Mis Outfits</h1>
-        <button onClick={() => setCreateOpen(true)} className="btn-primary">+ Nuevo outfit</button>
+    <div className="max-w-4xl mx-auto px-margin-desktop py-xl">
+      <div className="flex items-center justify-between mb-xl">
+        <h1 className="font-headline-md text-headline-md text-on-surface">Mis Outfits</h1>
+        <button onClick={() => setCreateOpen(true)} className="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all flex items-center gap-xs">
+          <span className="material-symbols-outlined text-[18px]">add</span>
+          Nuevo outfit
+        </button>
       </div>
 
       {outfits.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-5xl mb-4">👗</p>
-          <h2 className="text-xl font-semibold mb-2">No tienes outfits aún</h2>
-          <p className="text-sm mb-6">Crea outfits combinando prendas de la plataforma</p>
-          <button onClick={() => setCreateOpen(true)} className="btn-primary">Crear mi primer outfit</button>
+        <div className="text-center py-20">
+          <span className="material-symbols-outlined text-on-surface-variant/30 text-8xl">style</span>
+          <h2 className="font-headline-md text-headline-md text-on-surface mt-lg mb-sm">No tienes outfits aún</h2>
+          <p className="font-body-md text-on-surface-variant mb-xl">Crea outfits combinando prendas de la plataforma</p>
+          <button onClick={() => setCreateOpen(true)} className="bg-primary text-on-primary px-lg py-md rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all">Crear mi primer outfit</button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-lg">
           {outfits.map(outfit => (
-            <div key={outfit.id} className="card p-5">
-              <div className="flex items-center justify-between mb-4">
+            <div key={outfit.id} className="card p-xl">
+              <div className="flex items-center justify-between mb-lg">
                 {editId === outfit.id ? (
-                  <div className="flex gap-2 flex-1">
-                    <input value={editName} onChange={e => setEditName(e.target.value)} className="input text-sm flex-1" autoFocus onKeyDown={e => e.key === 'Enter' && rename(outfit.id)} />
-                    <button onClick={() => rename(outfit.id)} className="btn-primary text-sm px-3">Guardar</button>
-                    <button onClick={() => setEditId(null)} className="btn-ghost text-sm">✕</button>
+                  <div className="flex gap-sm flex-1">
+                    <input value={editName} onChange={e => setEditName(e.target.value)} className="input flex-1" autoFocus onKeyDown={e => e.key === 'Enter' && rename(outfit.id)} />
+                    <button onClick={() => rename(outfit.id)} className="bg-primary text-on-primary px-md py-xs rounded-lg font-label-lg hover:opacity-90 transition-all">Guardar</button>
+                    <button onClick={() => setEditId(null)} className="border border-outline-variant text-on-surface-variant px-sm py-xs rounded-lg font-label-lg hover:bg-surface-container transition-all">
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3">
-                    <h2 className="font-semibold text-lg">{outfit.name}</h2>
-                    <span className="text-xs text-gray-400">{outfit.items?.length || 0} prendas</span>
+                  <div className="flex items-center gap-md">
+                    <h2 className="font-headline-sm text-headline-sm text-on-surface">{outfit.name}</h2>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">{outfit.items?.length || 0} prendas</span>
                   </div>
                 )}
                 {editId !== outfit.id && (
-                  <div className="flex gap-2">
-                    <button onClick={() => { setEditId(outfit.id); setEditName(outfit.name) }} className="btn-ghost text-sm py-1">Renombrar</button>
-                    <button onClick={() => deleteOutfit(outfit.id)} className="btn-ghost text-sm py-1 text-red-500">Eliminar</button>
+                  <div className="flex gap-sm">
+                    <button onClick={() => { setEditId(outfit.id); setEditName(outfit.name) }} className="font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-colors px-sm py-xs">Renombrar</button>
+                    <button onClick={() => deleteOutfit(outfit.id)} className="font-label-lg text-label-lg text-error hover:underline px-sm py-xs">Eliminar</button>
                   </div>
                 )}
               </div>
 
               {outfit.items?.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-md">
                     {outfit.items.map(item => (
                       <div key={item.id} className="relative group">
                         <Link to={`/products/${item.id}`} className="block">
-                          <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
+                          <div className="aspect-square bg-surface-container rounded-lg overflow-hidden">
                             {item.images?.[0] ? <img src={imgUrl(item.images[0])} alt={item.title} className="w-full h-full object-cover" />
-                              : <div className="w-full h-full bg-gray-200" />}
+                              : <div className="w-full h-full bg-surface-container-high" />}
                           </div>
-                          <p className="text-xs font-medium mt-1.5 line-clamp-2">{item.title}</p>
-                          <p className="text-xs text-primary font-bold">${Number(item.price).toLocaleString()}</p>
+                          <p className="font-label-sm text-label-sm text-on-surface mt-xs line-clamp-2">{item.title}</p>
+                          <p className="font-label-lg text-label-lg text-primary">${Number(item.price).toLocaleString()}</p>
                         </Link>
                         <button onClick={() => removeItem(outfit.id, item.id)}
-                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs items-center justify-center hidden group-hover:flex">✕</button>
+                          className="absolute top-2 right-2 w-6 h-6 bg-error text-on-error rounded-full text-xs items-center justify-center hidden group-hover:flex">
+                          <span className="material-symbols-outlined text-[12px]">close</span>
+                        </button>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
-                      Total: <span className="font-bold text-primary">${outfit.items.reduce((s, i) => s + i.price, 0).toLocaleString()}</span>
+                  <div className="mt-lg pt-md border-t border-outline-variant/20 flex items-center justify-between">
+                    <p className="font-body-md text-on-surface-variant">
+                      Total: <span className="font-headline-sm text-headline-sm text-primary">${outfit.items.reduce((s, i) => s + i.price, 0).toLocaleString()}</span>
                     </p>
-                    <div className="flex gap-2">
-                      {outfit.items.map(item => (
-                        <button key={item.id} onClick={async () => { try { await api.post('/cart', { product_id: item.id }); alert('Agregado al carrito') } catch(e) { alert(e.response?.data?.error) } }}
-                          className="hidden">add</button>
-                      ))}
-                      <button onClick={async () => {
-                        for (const item of outfit.items) {
-                          try { await api.post('/cart', { product_id: item.id }) } catch {}
-                        }
-                        navigate('/cart')
-                      }} className="btn-primary text-sm">Agregar todo al carrito</button>
-                    </div>
+                    <button onClick={async () => {
+                      for (const item of outfit.items) {
+                        try { await api.post('/cart', { product_id: item.id }) } catch {}
+                      }
+                      navigate('/cart')
+                    }} className="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all">Agregar todo al carrito</button>
                   </div>
                 </>
               ) : (
-                <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl">
-                  <p className="text-gray-400 text-sm mb-2">Este outfit está vacío</p>
-                  <Link to="/" className="text-sm text-primary hover:underline">Explorar productos para agregar</Link>
+                <div className="text-center py-xl border-2 border-dashed border-outline-variant rounded-lg">
+                  <span className="material-symbols-outlined text-on-surface-variant/40 text-4xl">style</span>
+                  <p className="font-body-md text-on-surface-variant mt-sm mb-sm">Este outfit está vacío</p>
+                  <Link to="/" className="font-label-lg text-label-lg text-primary hover:underline">Explorar productos para agregar</Link>
                 </div>
               )}
             </div>
@@ -134,14 +136,14 @@ export default function Outfits() {
 
       {createOpen && (
         <Modal onClose={() => setCreateOpen(false)} title="Crear outfit" size="sm">
-          <div className="space-y-4">
+          <div className="space-y-md">
             <div>
-              <label className="text-sm font-medium block mb-1">Nombre del outfit</label>
+              <label className="font-label-lg text-label-lg text-on-surface block mb-xs">Nombre del outfit</label>
               <input className="input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ej: Look de verano, Casual Friday..." autoFocus onKeyDown={e => e.key === 'Enter' && create()} />
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setCreateOpen(false)} className="btn-ghost flex-1">Cancelar</button>
-              <button onClick={create} className="btn-primary flex-1">Crear</button>
+            <div className="flex gap-sm">
+              <button onClick={() => setCreateOpen(false)} className="border border-outline-variant text-on-surface-variant flex-1 py-sm rounded-lg font-label-lg hover:bg-surface-container transition-all">Cancelar</button>
+              <button onClick={create} className="bg-primary text-on-primary flex-1 py-sm rounded-lg font-label-lg hover:opacity-90 active:scale-95 transition-all">Crear</button>
             </div>
           </div>
         </Modal>

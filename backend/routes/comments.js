@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { getDb } = require('../database');
 const { auth, optionalAuth } = require('../middleware/auth');
+const { createNotification } = require('./notifications');
 
 router.get('/:productId', optionalAuth, (req, res) => {
   const db = getDb();
@@ -26,10 +27,38 @@ router.post('/:productId', auth, (req, res) => {
   const { content, parent_id } = req.body;
   if (!content?.trim()) return res.status(400).json({ error: 'Contenido requerido' });
   const db = getDb();
-  const p = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.productId);
-  if (!p) return res.status(404).json({ error: 'Producto no encontrado' });
+  const product = db.prepare('SELECT id, title, seller_id FROM products WHERE id = ?').get(req.params.productId);
+  if (!product) return res.status(404).json({ error: 'Producto no encontrado' });
+
   const info = db.prepare('INSERT INTO comments (product_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)').run(req.params.productId, req.user.id, content.trim(), parent_id || null);
   const comment = db.prepare('SELECT c.*, u.username, u.avatar FROM comments c JOIN users u ON u.id = c.user_id WHERE c.id = ?').get(info.lastInsertRowid);
+
+  // Notificaciones
+  if (parent_id) {
+    // Respuesta a un comentario → notificar al autor del comentario original
+    const parentComment = db.prepare('SELECT user_id FROM comments WHERE id = ?').get(parent_id);
+    if (parentComment && parentComment.user_id !== req.user.id) {
+      createNotification(db, req.io, {
+        userId: parentComment.user_id,
+        type: 'comment_reply',
+        title: 'Nueva respuesta a tu comentario',
+        body: `@${req.user.username} respondió tu comentario en "${product.title}"`,
+        relatedId: product.id,
+      });
+    }
+  } else {
+    // Comentario nuevo en producto → notificar al vendedor
+    if (product.seller_id !== req.user.id) {
+      createNotification(db, req.io, {
+        userId: product.seller_id,
+        type: 'new_comment',
+        title: 'Nuevo comentario en tu publicación',
+        body: `@${req.user.username} comentó en "${product.title}"`,
+        relatedId: product.id,
+      });
+    }
+  }
+
   res.json(comment);
 });
 
