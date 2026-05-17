@@ -65,9 +65,21 @@ router.post('/:id/messages', auth, (req, res) => {
   const n = db.prepare('SELECT * FROM negotiations WHERE id = ? AND (buyer_id = ? OR seller_id = ?) AND status = ?').get(req.params.id, req.user.id, req.user.id, 'open');
   if (!n) return res.status(404).json({ error: 'Negociación no encontrada o cerrada' });
 
+  // Guardar el mensaje con la propuesta de precio (si existe)
   const info = db.prepare('INSERT INTO negotiation_messages (negotiation_id, sender_id, message, proposed_price) VALUES (?, ?, ?, ?)').run(req.params.id, req.user.id, message || null, proposed_price || null);
   const msg = db.prepare('SELECT nm.*, u.username FROM negotiation_messages nm JOIN users u ON u.id = nm.sender_id WHERE nm.id = ?').get(info.lastInsertRowid);
 
+  // Si se propone un precio, actualizar el precio propuesto de este usuario
+  if (proposed_price) {
+    const isBuyer = req.user.id === n.buyer_id;
+    db.prepare(`UPDATE negotiations SET ${isBuyer ? 'buyer_proposed_price' : 'seller_proposed_price'} = ? WHERE id = ?`)
+      .run(proposed_price, req.params.id);
+    
+    // Emitir actualización de propuestas
+    const updatedNeg = db.prepare('SELECT buyer_proposed_price, seller_proposed_price FROM negotiations WHERE id = ?').get(req.params.id);
+    req.io?.to(`neg-${req.params.id}`).emit('prices-updated', updatedNeg);
+  }
+  
   req.io?.to(`neg-${req.params.id}`).emit('message', msg);
   res.json(msg);
 });
@@ -79,19 +91,31 @@ router.post('/:id/agree', auth, (req, res) => {
   const n = db.prepare('SELECT * FROM negotiations WHERE id = ? AND (buyer_id = ? OR seller_id = ?) AND status = ?').get(req.params.id, req.user.id, req.user.id, 'open');
   if (!n) return res.status(404).json({ error: 'Negociación no encontrada' });
 
-  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  db.prepare('UPDATE negotiations SET status = ?, agreed_price = ?, expires_at = ? WHERE id = ?').run('agreed', price, expires, req.params.id);
+  const isBuyer = req.user.id === n.buyer_id;
+  const otherProposedPrice = isBuyer ? n.seller_proposed_price : n.buyer_proposed_price;
+  
+  // Chequear si estamos aceptando el precio que el otro propuso
+  // Si es así, la negociación se completa automáticamente
+  if (otherProposedPrice && Number(otherProposedPrice) === Number(price)) {
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    db.prepare('UPDATE negotiations SET status = ?, agreed_price = ?, expires_at = ? WHERE id = ?')
+      .run('agreed', price, expires, req.params.id);
 
-  // Add to cart with negotiated price
-  const existing = db.prepare('SELECT * FROM cart_items WHERE user_id = ? AND product_id = ?').get(n.buyer_id, n.product_id);
-  if (existing) {
-    db.prepare('UPDATE cart_items SET negotiated_price = ?, negotiation_expires_at = ? WHERE id = ?').run(price, expires, existing.id);
+    // Agregar al carrito del comprador
+    const existing = db.prepare('SELECT * FROM cart_items WHERE user_id = ? AND product_id = ?').get(n.buyer_id, n.product_id);
+    if (existing) {
+      db.prepare('UPDATE cart_items SET negotiated_price = ?, negotiation_expires_at = ? WHERE id = ?').run(price, expires, existing.id);
+    } else {
+      db.prepare('INSERT INTO cart_items (user_id, product_id, quantity, negotiated_price, negotiation_expires_at) VALUES (?, ?, 1, ?, ?)').run(n.buyer_id, n.product_id, price, expires);
+    }
+
+    req.io?.to(`neg-${req.params.id}`).emit('agreed', { price, expires_at: expires });
+    res.json({ ok: true, status: 'agreed', expires_at: expires });
   } else {
-    db.prepare('INSERT INTO cart_items (user_id, product_id, quantity, negotiated_price, negotiation_expires_at) VALUES (?, ?, 1, ?, ?)').run(n.buyer_id, n.product_id, price, expires);
+    // El precio que está aceptando no es el que el otro propuso
+    // Esto no debería pasar en el flujo normal, pero lo manejamos como error
+    res.status(400).json({ error: 'El precio no coincide con la propuesta actual. Recarga la página.' });
   }
-
-  req.io?.to(`neg-${req.params.id}`).emit('agreed', { price, expires_at: expires });
-  res.json({ ok: true, expires_at: expires });
 });
 
 router.post('/:id/reject', auth, (req, res) => {

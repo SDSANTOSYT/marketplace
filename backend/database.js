@@ -141,6 +141,8 @@ function initSchema() {
       product_id INTEGER NOT NULL,
       status TEXT NOT NULL DEFAULT 'open',
       agreed_price REAL,
+      buyer_accepted_at DATETIME,
+      seller_accepted_at DATETIME,
       expires_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (buyer_id) REFERENCES users(id),
@@ -182,6 +184,31 @@ function initSchema() {
       FOREIGN KEY (seller_id) REFERENCES users(id)
     );
   `);
+
+  // Migrations - Add missing columns if they don't exist
+  try {
+    db.prepare("ALTER TABLE negotiations ADD COLUMN buyer_proposed_price REAL").run();
+  } catch (e) {
+    // Column already exists
+  }
+  
+  try {
+    db.prepare("ALTER TABLE negotiations ADD COLUMN seller_proposed_price REAL").run();
+  } catch (e) {
+    // Column already exists
+  }
+  
+  try {
+    db.prepare("ALTER TABLE negotiations ADD COLUMN buyer_accepted_at DATETIME").run();
+  } catch (e) {
+    // Column already exists
+  }
+  
+  try {
+    db.prepare("ALTER TABLE negotiations ADD COLUMN seller_accepted_at DATETIME").run();
+  } catch (e) {
+    // Column already exists
+  }
 }
 
 module.exports = { getDb };

@@ -17,6 +17,7 @@ export default function AddProduct() {
   const [form, setForm] = useState({ title: '', description: '', price: '', quantity: '1', category: '', condition: 'new', sizes: [], colors: [] })
   const [files, setFiles] = useState([])
   const [existingImages, setExistingImages] = useState([])
+  const [keptExistingImages, setKeptExistingImages] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -32,6 +33,7 @@ export default function AddProduct() {
       api.get(`/products/${id}`).then(({ data }) => {
         setForm({ title: data.title, description: data.description || '', price: data.price, quantity: data.quantity, category: data.category, condition: data.condition, sizes: data.sizes || [], colors: data.colors || [] })
         setExistingImages(data.images || [])
+        setKeptExistingImages(data.images || [])
       })
     }
   }, [user, id])
@@ -45,8 +47,10 @@ export default function AddProduct() {
         else fd.append(k, v)
       })
       files.forEach(f => fd.append('images', f))
-
+      
+      // Si estamos editando, enviar las imágenes que mantener
       if (isEdit) {
+        fd.append('keepImages', JSON.stringify(keptExistingImages))
         await api.put(`/products/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
         navigate(`/products/${id}`)
       } else {
@@ -70,11 +74,27 @@ export default function AddProduct() {
         <div className="card p-5">
           <label className="text-sm font-medium block mb-3">Imágenes *</label>
           <div className="flex gap-3 flex-wrap">
-            {existingImages.map((img, i) => (
-              <div key={i} className="w-20 h-20 rounded-lg overflow-hidden border"><img src={imgUrl(img)} className="w-full h-full object-cover" alt="" /></div>
+            {keptExistingImages.map((img, i) => (
+              <div key={`existing-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border">
+                <img src={imgUrl(img)} className="w-full h-full object-cover" alt="" />
+                <button type="button" onClick={() => setKeptExistingImages(prev => prev.filter(x => x !== img))}
+                  className="absolute top-0 right-0 bg-red-500 text-white w-6 h-6 flex items-center justify-center rounded-bl-lg opacity-0 hover:opacity-100 transition-opacity">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             ))}
             {previews.map((url, i) => (
-              <div key={`new-${i}`} className="w-20 h-20 rounded-lg overflow-hidden border border-primary"><img src={url} className="w-full h-full object-cover" alt="" /></div>
+              <div key={`new-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border border-primary">
+                <img src={url} className="w-full h-full object-cover" alt="" />
+                <button type="button" onClick={() => setFiles(prev => { prev.splice(i, 1); return [...prev] })}
+                  className="absolute top-0 right-0 bg-red-500 text-white w-6 h-6 flex items-center justify-center rounded-bl-lg opacity-0 hover:opacity-100 transition-opacity">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             ))}
             <button type="button" onClick={() => fileRef.current.click()}
               className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors">

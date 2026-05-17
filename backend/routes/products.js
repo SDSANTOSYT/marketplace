@@ -1,9 +1,25 @@
 const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { v4: uuid } = require('uuid');
 const { getDb } = require('../database');
 const { auth, optionalAuth } = require('../middleware/auth');
+
+// Helper para eliminar archivos de imagen del disco
+function deleteImageFiles(imageUrls) {
+  if (!Array.isArray(imageUrls)) return;
+  imageUrls.forEach(img => {
+    const filePath = path.join(__dirname, '..', img);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        console.error(`Error al eliminar imagen ${filePath}:`, err);
+      }
+    }
+  });
+}
 
 const storage = multer.diskStorage({
   destination: path.join(__dirname, '..', 'uploads'),
@@ -75,9 +91,25 @@ router.put('/:id', auth, upload.array('images', 10), (req, res) => {
   const db = getDb();
   const p = db.prepare('SELECT * FROM products WHERE id = ? AND seller_id = ?').get(req.params.id, req.user.id);
   if (!p) return res.status(404).json({ error: 'No encontrado o sin permiso' });
-  const { title, description, price, quantity, category, condition, sizes, colors } = req.body;
+  const { title, description, price, quantity, category, condition, sizes, colors, keepImages } = req.body;
   const newImages = (req.files || []).map(f => `uploads/${f.filename}`);
-  const images = newImages.length ? JSON.stringify(newImages) : p.images;
+  
+  // Procesar imágenes: si hay nuevas, usarlas; si no, usar las que el usuario seleccionó mantener
+  let images = p.images;
+  if (newImages.length > 0) {
+    // Eliminar imágenes antiguas solo si se cargan nuevas
+    const oldImages = JSON.parse(p.images || '[]');
+    deleteImageFiles(oldImages);
+    images = JSON.stringify(newImages);
+  } else if (keepImages) {
+    // Si no hay nuevas imágenes pero el usuario eliminó algunas, actualizar la lista
+    const keptImagesList = typeof keepImages === 'string' ? JSON.parse(keepImages) : keepImages;
+    const oldImages = JSON.parse(p.images || '[]');
+    const imagesToDelete = oldImages.filter(img => !keptImagesList.includes(img));
+    deleteImageFiles(imagesToDelete);
+    images = JSON.stringify(keptImagesList);
+  }
+  
   db.prepare('UPDATE products SET title=?, description=?, price=?, quantity=?, category=?, condition=?, sizes=?, colors=?, images=? WHERE id=?').run(
     title || p.title, description ?? p.description, price ? Number(price) : p.price,
     quantity ? Number(quantity) : p.quantity, category || p.category, condition || p.condition,
@@ -91,6 +123,11 @@ router.delete('/:id', auth, (req, res) => {
   const db = getDb();
   const p = db.prepare('SELECT * FROM products WHERE id = ? AND seller_id = ?').get(req.params.id, req.user.id);
   if (!p) return res.status(404).json({ error: 'No encontrado o sin permiso' });
+  
+  // Eliminar imágenes del disco
+  const images = JSON.parse(p.images || '[]');
+  deleteImageFiles(images);
+  
   db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
