@@ -30,14 +30,14 @@ router.post('/register', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
-  const db = getDb();
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
-  if (!user || !bcrypt.compareSync(password, user.password_hash))
-    return res.status(401).json({ error: 'Credenciales incorrectas' });
-  const { password_hash, ...safe } = user;
-  res.json({ token: sign(user), user: safe });
+   const { email, password } = req.body;
+   if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
+   const db = getDb();
+   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
+   if (!user || !bcrypt.compareSync(password, user.password_hash))
+     return res.status(400).json({ error: 'Credenciales incorrectas' });
+   const { password_hash, ...safe } = user;
+   res.json({ token: sign(user), user: safe });
 });
 
 router.get('/me', auth, (req, res) => {
