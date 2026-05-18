@@ -11,8 +11,8 @@ RUN npm ci --only=production
 # Copiar el resto de la aplicación
 COPY . .
 
-# Crear directorio de uploads si no existe
-RUN mkdir -p uploads
+# Crear directorio de storage si no existe
+RUN mkdir -p storage
 
 # Puerto del backend
 EXPOSE 3001

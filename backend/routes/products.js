@@ -10,7 +10,7 @@ const { auth, optionalAuth } = require('../middleware/auth');
 function deleteImageFiles(imageUrls) {
   if (!Array.isArray(imageUrls)) return;
   imageUrls.forEach(img => {
-    const filePath = path.join(__dirname, '..', img);
+    const filePath = path.join(__dirname, '..', 'storage', img);
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
@@ -22,7 +22,7 @@ function deleteImageFiles(imageUrls) {
 }
 
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'uploads'),
+  destination: path.join(__dirname, '..', 'storage', 'uploads'),
   filename: (_req, file, cb) => cb(null, `${uuid()}${path.extname(file.originalname)}`)
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });

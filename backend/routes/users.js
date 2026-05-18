@@ -9,7 +9,7 @@ const { auth } = require('../middleware/auth');
 
 // ─── Avatar upload ────────────────────────────────────────────────────────────
 const avatarStorage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'uploads'),
+  destination: path.join(__dirname, '..', 'storage', 'uploads'),
   filename: (_req, file, cb) => cb(null, `avatar-${uuid()}${path.extname(file.originalname)}`),
 });
 const avatarUpload = multer({
@@ -24,7 +24,7 @@ const avatarUpload = multer({
 function deleteAvatarFile(avatarPath) {
   if (!avatarPath) return;
   try {
-    const fullPath = path.join(__dirname, '..', avatarPath);
+    const fullPath = path.join(__dirname, '..', 'storage', avatarPath);
     if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
   } catch {}
 }

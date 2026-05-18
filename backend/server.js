@@ -14,7 +14,7 @@ const io = new Server(server, { cors: { origin: ORIGIN, methods: ['GET', 'POST']
 
 app.use(cors({ origin: ORIGIN, credentials: true }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'storage', 'uploads')));
 app.use((req, _res, next) => { req.io = io; next(); });
 
 app.use('/api/auth',          require('./routes/auth'));
