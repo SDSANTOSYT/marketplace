@@ -15,6 +15,20 @@ function getDb() {
     db.exec("PRAGMA journal_mode = WAL");
     db.exec("PRAGMA foreign_keys = ON");
     initSchema();
+    // Add transaction helper method
+    db.transaction = function(fn) {
+      return function() {
+        try {
+          db.exec("BEGIN TRANSACTION");
+          const result = fn();
+          db.exec("COMMIT");
+          return result;
+        } catch (error) {
+          db.exec("ROLLBACK");
+          throw error;
+        }
+      };
+    };
   }
   return db;
 }
