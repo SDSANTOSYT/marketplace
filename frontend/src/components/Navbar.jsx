@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import AuthModal from "./AuthModal";
+import { imgUrl } from "../lib/api";
 
 // Categorías limpias: sin duplicados, sin "Nuevos" ni "Ofertas"
 const CATEGORIES = [
@@ -246,19 +247,23 @@ export default function Navbar() {
                     Vender
                   </Link>
 
-                  {/* User menu */}
-                  <div className="relative" ref={menuRef}>
-                    <button
-                      onClick={() => setMenuOpen(!menuOpen)}
-                      className="flex items-center gap-xs p-xs hover:bg-surface-container-low rounded-full transition-all active:scale-95"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-sm">
-                        {user.username[0].toUpperCase()}
-                      </div>
-                      <span className="hidden sm:block font-label-lg text-label-lg text-on-surface">
-                        {user.username}
-                      </span>
-                    </button>
+                   {/* User menu */}
+                   <div className="relative" ref={menuRef}>
+                     <button
+                       onClick={() => setMenuOpen(!menuOpen)}
+                       className="flex items-center gap-xs p-xs hover:bg-surface-container-low rounded-full transition-all active:scale-95"
+                     >
+                       {user.avatar ? (
+                         <img src={imgUrl(user.avatar)} alt={user.username} className="w-8 h-8 rounded-full object-cover border border-primary-fixed" />
+                       ) : (
+                         <div className="w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-sm">
+                           {user.username[0].toUpperCase()}
+                         </div>
+                       )}
+                       <span className="hidden sm:block font-label-lg text-label-lg text-on-surface">
+                         {user.username}
+                       </span>
+                     </button>
                     {menuOpen && (
                       <div
                         className="absolute right-0 mt-2 w-52 bg-surface-container-lowest rounded-lg shadow-lg border border-outline-variant/20 py-1 z-50"
