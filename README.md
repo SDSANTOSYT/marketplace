@@ -26,7 +26,7 @@ Plataforma completa de compra y venta de ropa nueva y usada con negociación en 
 
 ### Deployment
 - **Vercel** - Frontend (React + Vite)
-- **Replit** - Backend (Node.js)
+- **Railway** - Backend (Node.js)
 
 ---
 
@@ -105,27 +105,31 @@ El frontend estará disponible en: **http://localhost:5173**
 
 ---
 
-## 🌍 Deployment (Vercel + Replit)
+## 🌍 Deployment (Vercel + Railway)
 
-### Backend en Replit
+### Backend en Railway
 
-1. Ve a https://replit.com
-2. Click en **"+ Create"** → **"Import from GitHub"**
+1. Ve a https://railway.app
+2. Click en **"New Project"** → **"Deploy from GitHub Repo"**
 3. Selecciona este repositorio
-4. Replit detectará que es Node.js automáticamente
-5. Crea un archivo `.env` en `backend/` con:
+4. En **"Configure"**:
+   - **Root Directory:** `backend/`
+   - **Start Command:** `npm start` (o `node server.js`)
+   - **Node.js Version:** 22 (o superior)
+
+5. Agrega las **Environment Variables** en Railway:
 
 ```env
-JWT_SECRET=tu-secreto-aqui
+JWT_SECRET=tu-secreto-muy-largo-y-seguro-aqui
 FRONTEND_URL=https://tu-frontend.vercel.app
 PORT=3001
 GROQ_API_KEY=tu-api-key-opcional
 GEMINI_API_KEY=tu-api-key-opcional
 ```
 
-6. Click en **"Run"**
+6. Railway asignará automáticamente un dominio público
 
-**Tu backend URL será:** `https://tu-proyecto.replit.dev`
+**Tu backend URL será:** `https://[nombre-railway].up.railway.app`
 
 ### Frontend en Vercel
 
@@ -141,7 +145,7 @@ GEMINI_API_KEY=tu-api-key-opcional
 5. En **"Environment Variables"**, agrega:
 
 ```
-VITE_API_URL = https://tu-backend.replit.dev
+VITE_API_URL = https://[nombre-railway].up.railway.app
 ```
 
 6. Click en **"Deploy"**
@@ -327,9 +331,12 @@ PORT=3002 npm run dev
 npm run dev -- --port 3000
 ```
 
-### La BD se reinicia en cada deploy (Replit)
+### La BD se reinicia cada deploy (SQLite)
 
-SQLite en Replit persiste datos. Si necesitas una BD más escalable, migra a PostgreSQL.
+SQLite se reinicia en cada deploy si el volumen de Railway no está configurado. Para persistencia de datos:
+- Opción 1: Configurar volumen de Railway para `/app/backend/`
+- Opción 2: Migrar a PostgreSQL (recomendado para producción)
+- Ver instrucciones en `DEPLOY.md`
 
 ---
 
