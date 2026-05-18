@@ -23,7 +23,8 @@ api.interceptors.response.use(r => r, err => {
 export const imgUrl = (path) => {
   if (!path) return null
   const normalized = path.replace(/\\/g, '/')
-  return normalized.startsWith('/') ? normalized : `/${normalized}`
+  const route = normalized.startsWith('/') ? normalized : `/${normalized}`
+  return `${API_URL}${route}`
 }
 
 /**
