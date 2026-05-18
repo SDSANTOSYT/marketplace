@@ -30,7 +30,7 @@ export function NotificationProvider({ children }) {
 
     load()
 
-    const socket = io('/', { path: '/socket.io' })
+    const socket = io(import.meta.env.VITE_API_URL, { path: '/socket.io' })
     socketRef.current = socket
     socket.emit('join-user', user.id)
     socket.on('notification', (notif) => {

@@ -25,7 +25,7 @@ export default function Negotiation() {
     }).catch(() => navigate('/profile?tab=negotiations'))
       .finally(() => setLoading(false))
 
-    const socket = io('/', { path: '/socket.io' })
+    const socket = io(import.meta.env.VITE_API_URL, { path: '/socket.io' })
     socketRef.current = socket
     socket.emit('join-negotiation', id)
     socket.on('message', (msg) => setMessages(prev => [...prev, msg]))
