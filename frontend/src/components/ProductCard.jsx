@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useWishlist } from '../context/WishlistContext'
-import { imgUrl } from '../lib/api'
-import api from '../lib/api'
+import api, { imgUrl, formatPrice } from '../lib/api'
 
 export default function ProductCard({ product }) {
   const { user } = useAuth()
@@ -99,7 +98,7 @@ export default function ProductCard({ product }) {
           )}
           <h3 className="font-label-lg text-label-lg text-on-surface truncate">{product.title}</h3>
           <div className="flex items-center justify-between mt-base">
-            <span className="font-headline-sm text-headline-sm text-primary">${Number(product.price).toLocaleString()}</span>
+            <span className="font-headline-sm text-headline-sm text-primary">${formatPrice(product.price)}</span>
             {product.quantity > 0 ? (
               <button
                 onClick={addToCart}

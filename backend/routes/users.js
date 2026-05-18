@@ -1,9 +1,35 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { v4: uuid } = require('uuid');
 const { getDb } = require('../database');
 const { auth } = require('../middleware/auth');
 
-// Get public profile
+// ─── Avatar upload ────────────────────────────────────────────────────────────
+const avatarStorage = multer.diskStorage({
+  destination: path.join(__dirname, '..', 'uploads'),
+  filename: (_req, file, cb) => cb(null, `avatar-${uuid()}${path.extname(file.originalname)}`),
+});
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) return cb(new Error('Solo se permiten imágenes'));
+    cb(null, true);
+  },
+});
+
+function deleteAvatarFile(avatarPath) {
+  if (!avatarPath) return;
+  try {
+    const fullPath = path.join(__dirname, '..', avatarPath);
+    if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+  } catch {}
+}
+
+// ─── Perfil público ───────────────────────────────────────────────────────────
 router.get('/:id', (req, res) => {
   const db = getDb();
   const user = db.prepare('SELECT id, username, avatar, created_at FROM users WHERE id = ?').get(req.params.id);
@@ -13,7 +39,7 @@ router.get('/:id', (req, res) => {
   res.json({ ...user, avgRating: avgRating?.avg || 0, totalSales: totalSales?.c || 0 });
 });
 
-// Update own profile
+// ─── Actualizar perfil ────────────────────────────────────────────────────────
 router.put('/me/profile', auth, (req, res) => {
   const { username, email, recovery_email, password } = req.body;
   const db = getDb();
@@ -34,7 +60,29 @@ router.put('/me/profile', auth, (req, res) => {
   }
 });
 
-// Addresses
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+// POST /api/users/me/avatar — sube nueva foto de perfil
+router.post('/me/avatar', auth, avatarUpload.single('avatar'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Imagen requerida' });
+  const db = getDb();
+  // Eliminar avatar anterior si existe
+  const current = db.prepare('SELECT avatar FROM users WHERE id = ?').get(req.user.id);
+  deleteAvatarFile(current?.avatar);
+  const avatarPath = `uploads/${req.file.filename}`;
+  db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarPath, req.user.id);
+  res.json({ avatar: avatarPath });
+});
+
+// DELETE /api/users/me/avatar — elimina la foto de perfil
+router.delete('/me/avatar', auth, (req, res) => {
+  const db = getDb();
+  const current = db.prepare('SELECT avatar FROM users WHERE id = ?').get(req.user.id);
+  deleteAvatarFile(current?.avatar);
+  db.prepare('UPDATE users SET avatar = NULL WHERE id = ?').run(req.user.id);
+  res.json({ ok: true });
+});
+
+// ─── Direcciones ──────────────────────────────────────────────────────────────
 router.get('/me/addresses', auth, (req, res) => {
   res.json(getDb().prepare('SELECT * FROM addresses WHERE user_id = ?').all(req.user.id));
 });
@@ -63,7 +111,7 @@ router.delete('/me/addresses/:id', auth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Payment methods
+// ─── Métodos de pago ──────────────────────────────────────────────────────────
 router.get('/me/payments', auth, (req, res) => {
   res.json(getDb().prepare('SELECT * FROM payment_methods WHERE user_id = ?').all(req.user.id));
 });

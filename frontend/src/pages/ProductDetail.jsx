@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import api, { imgUrl } from '../lib/api'
+import api, { imgUrl, formatPrice } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { useWishlist } from '../context/WishlistContext'
 import StarRating from '../components/StarRating'
@@ -144,7 +144,7 @@ export default function ProductDetail() {
             </span>
           </div>
 
-          <div className="font-headline-md text-headline-md text-primary">${Number(product.price).toLocaleString()}</div>
+          <div className="font-headline-md text-headline-md text-primary">${formatPrice(product.price)}</div>
 
           {/* Seller */}
           <Link to={`/users/${product.seller_id}`} className="flex items-center gap-md p-md bg-surface-container-low rounded-lg hover:bg-surface-container transition-colors">

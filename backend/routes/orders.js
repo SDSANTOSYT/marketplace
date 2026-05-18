@@ -8,6 +8,11 @@ router.get('/', auth, (req, res) => {
   const orders = db.prepare('SELECT * FROM orders WHERE buyer_id = ? ORDER BY created_at DESC').all(req.user.id);
   for (const o of orders) {
     o.items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(o.id);
+    // Marcar si cada item ya tiene reseña
+    for (const item of o.items) {
+      const review = db.prepare('SELECT id FROM reviews WHERE order_item_id = ?').get(item.id);
+      item.reviewed = !!review;
+    }
   }
   res.json(orders);
 });
@@ -58,10 +63,13 @@ router.post('/', auth, (req, res) => {
     }
   }
 
-  const total = cartItems.reduce((sum, i) => {
-    const price = (i.negotiated_price && new Date(i.negotiation_expires_at) > new Date()) ? i.negotiated_price : i.price;
-    return sum + price * i.quantity;
-  }, 0);
+  // Redondear a 2 decimales para evitar imprecisiones de punto flotante
+  const total = Math.round(
+    cartItems.reduce((sum, i) => {
+      const price = (i.negotiated_price && new Date(i.negotiation_expires_at) > new Date()) ? i.negotiated_price : i.price;
+      return sum + Math.round(price * 100) / 100 * i.quantity;
+    }, 0) * 100
+  ) / 100;
 
   const addressSnap = JSON.stringify({ name: address.name, phone: address.phone, address: address.address });
 

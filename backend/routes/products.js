@@ -80,9 +80,10 @@ router.post('/', auth, upload.array('images', 10), (req, res) => {
   const images = (req.files || []).map(f => `uploads/${f.filename}`);
   if (!images.length) return res.status(400).json({ error: 'Se requiere al menos una imagen' });
   const db = getDb();
+  const roundedPrice = Math.round(Number(price) * 100) / 100;
   const info = db.prepare(
     'INSERT INTO products (seller_id, title, description, price, quantity, category, condition, sizes, colors, images) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(req.user.id, title, description || '', Number(price), Number(quantity) || 1, category, condition, sizes || '[]', colors || '[]', JSON.stringify(images));
+  ).run(req.user.id, title, description || '', roundedPrice, Number(quantity) || 1, category, condition, sizes || '[]', colors || '[]', JSON.stringify(images));
   res.json({ id: info.lastInsertRowid });
 });
 
@@ -110,8 +111,9 @@ router.put('/:id', auth, upload.array('images', 10), (req, res) => {
     images = JSON.stringify(keptImagesList);
   }
   
+  const updatedPrice = price ? Math.round(Number(price) * 100) / 100 : p.price;
   db.prepare('UPDATE products SET title=?, description=?, price=?, quantity=?, category=?, condition=?, sizes=?, colors=?, images=? WHERE id=?').run(
-    title || p.title, description ?? p.description, price ? Number(price) : p.price,
+    title || p.title, description ?? p.description, updatedPrice,
     quantity ? Number(quantity) : p.quantity, category || p.category, condition || p.condition,
     sizes || p.sizes, colors || p.colors, images, req.params.id
   );

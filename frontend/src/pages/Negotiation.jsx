@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
-import api, { imgUrl } from '../lib/api'
+import api, { imgUrl, formatPrice } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
 export default function Negotiation() {
@@ -125,7 +125,7 @@ export default function Negotiation() {
                       {msg.proposed_price && (
                         <div className={`mt-1 px-sm py-1 rounded-lg font-label-lg flex items-center gap-1 ${isMe ? 'bg-white/20' : 'bg-primary-fixed text-on-primary-fixed'}`}>
                           <span className="material-symbols-outlined text-[16px]">payments</span>
-                          Precio propuesto: ${Number(msg.proposed_price).toLocaleString()}
+                          Precio propuesto: ${formatPrice(msg.proposed_price)}
                         </div>
                       )}
                     </div>
@@ -155,7 +155,7 @@ export default function Negotiation() {
                     <div className="bg-white p-sm rounded-lg border border-outline-variant/20 flex justify-between items-center">
                       <div>
                         <p className="font-label-sm text-label-sm text-on-surface-variant">Comprador propone:</p>
-                        <p className="font-headline-sm text-headline-sm text-primary">${Number(buyerProposedPrice).toLocaleString()}</p>
+                        <p className="font-headline-sm text-headline-sm text-primary">${formatPrice(buyerProposedPrice)}</p>
                       </div>
                       {isSeller && !showAgree && (
                         <button onClick={() => { setAgreePrice(buyerProposedPrice); setShowAgree(true); }}
@@ -169,7 +169,7 @@ export default function Negotiation() {
                     <div className="bg-white p-sm rounded-lg border border-outline-variant/20 flex justify-between items-center">
                       <div>
                         <p className="font-label-sm text-label-sm text-on-surface-variant">Vendedor propone:</p>
-                        <p className="font-headline-sm text-headline-sm text-primary">${Number(sellerProposedPrice).toLocaleString()}</p>
+                        <p className="font-headline-sm text-headline-sm text-primary">${formatPrice(sellerProposedPrice)}</p>
                       </div>
                       {isBuyer && !showAgree && (
                         <button onClick={() => { setAgreePrice(sellerProposedPrice); setShowAgree(true); }}
@@ -188,7 +188,7 @@ export default function Negotiation() {
                   <p className="font-label-lg text-label-lg text-on-surface">Confirmar aceptación:</p>
                   <div className="bg-white p-md rounded-lg border-2 border-primary/20 text-center">
                     <p className="font-label-sm text-label-sm text-on-surface-variant mb-1">Precio acordado:</p>
-                    <p className="font-display-lg text-display-lg text-primary">${Number(agreePrice).toLocaleString()}</p>
+                    <p className="font-display-lg text-display-lg text-primary">${formatPrice(agreePrice)}</p>
                   </div>
                   <p className="font-label-sm text-label-sm text-on-surface-variant">Ambos están de acuerdo con este precio y la compra se completará.</p>
                   <div className="flex gap-sm">
@@ -236,7 +236,7 @@ export default function Negotiation() {
             <div className="border-t border-outline-variant/20 p-md text-center">
               {neg.status === 'agreed' ? (
                 <div>
-                  <p className="font-body-md text-on-surface mb-sm">Precio acordado: <strong className="text-primary">${Number(neg.agreed_price).toLocaleString()}</strong></p>
+                  <p className="font-body-md text-on-surface mb-sm">Precio acordado: <strong className="text-primary">${formatPrice(neg.agreed_price)}</strong></p>
                   {isBuyer && <Link to="/cart" className="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-lg hover:opacity-90 transition-all inline-block">Ir al carrito</Link>}
                   {isSeller && <p className="font-body-md text-on-surface-variant">El comprador tiene el precio en su carrito</p>}
                 </div>
@@ -257,10 +257,10 @@ export default function Negotiation() {
             </Link>
             <div className="p-md">
               <Link to={`/products/${neg.product_id}`} className="font-label-lg text-label-lg text-on-surface hover:text-primary transition-colors block mb-xs">{neg.product_title}</Link>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">Precio original: <span className="font-label-lg text-on-surface">${Number(neg.original_price).toLocaleString()}</span></p>
+              <p className="font-label-sm text-label-sm text-on-surface-variant">Precio original: <span className="font-label-lg text-on-surface">${formatPrice(neg.original_price)}</span></p>
               {neg.status === 'agreed' && (
                 <span className="inline-block mt-sm bg-primary-fixed text-on-primary-fixed px-sm py-1 rounded-full font-label-sm text-label-sm">
-                  Acordado: ${Number(neg.agreed_price).toLocaleString()} · expira {new Date(neg.expires_at).toLocaleDateString('es')}
+                  Acordado: ${formatPrice(neg.agreed_price)} · expira {new Date(neg.expires_at).toLocaleDateString('es')}
                 </span>
               )}
               {neg.status === 'rejected' && (
@@ -276,13 +276,13 @@ export default function Negotiation() {
               {buyerProposedPrice && (
                 <div className="mb-sm">
                   <p className="font-label-sm text-label-sm text-on-surface-variant">Comprador</p>
-                  <p className="font-display-lg text-display-lg text-primary">${Number(buyerProposedPrice).toLocaleString()}</p>
+                  <p className="font-display-lg text-display-lg text-primary">${formatPrice(buyerProposedPrice)}</p>
                 </div>
               )}
               {sellerProposedPrice && (
                 <div>
                   <p className="font-label-sm text-label-sm text-on-surface-variant">Vendedor</p>
-                  <p className="font-display-lg text-display-lg text-secondary">${Number(sellerProposedPrice).toLocaleString()}</p>
+                  <p className="font-display-lg text-display-lg text-secondary">${formatPrice(sellerProposedPrice)}</p>
                 </div>
               )}
               <span className="inline-block mt-md bg-surface-container text-on-surface-variant px-sm py-1 rounded-full font-label-sm text-label-sm">Negociando</span>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import api, { imgUrl } from '../lib/api'
+import api, { imgUrl, formatPrice } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
 export default function Cart() {
@@ -128,8 +128,8 @@ export default function Cart() {
                   </div>
                   <div className="flex items-center gap-md">
                     <div className="text-right">
-                      {hasNegotiated && <p className="font-label-sm text-label-sm text-on-surface-variant line-through">${Number(item.price).toLocaleString()}</p>}
-                      <p className="font-headline-sm text-headline-sm text-primary">${(item.effectivePrice * item.quantity).toLocaleString()}</p>
+                      {hasNegotiated && <p className="font-label-sm text-label-sm text-on-surface-variant line-through">${formatPrice(item.price)}</p>}
+                      <p className="font-headline-sm text-headline-sm text-primary">${formatPrice(item.effectivePrice * item.quantity)}</p>
                     </div>
                     <button onClick={() => remove(item.id)} className="text-on-surface-variant hover:text-error transition-colors p-1">
                       <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -145,7 +145,7 @@ export default function Cart() {
       <div className="bg-surface-container-lowest rounded-lg p-lg mt-lg border border-outline-variant/20">
         <div className="flex justify-between items-center font-headline-sm text-headline-sm mb-lg">
           <span className="text-on-surface">Total</span>
-          <span className="text-primary">${total.toLocaleString()}</span>
+          <span className="text-primary">${formatPrice(total)}</span>
         </div>
         {hasStockIssue ? (
           <div className="w-full py-md rounded-lg bg-surface-container text-on-surface-variant text-center font-label-lg cursor-not-allowed">
