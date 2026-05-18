@@ -148,9 +148,13 @@ export default function ProductDetail() {
 
           {/* Seller */}
           <Link to={`/users/${product.seller_id}`} className="flex items-center gap-md p-md bg-surface-container-low rounded-lg hover:bg-surface-container transition-colors">
-            <div className="w-10 h-10 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-sm shrink-0">
-              {product.seller?.username?.[0]?.toUpperCase()}
-            </div>
+            {product.seller?.avatar ? (
+              <img src={imgUrl(product.seller.avatar)} alt={product.seller?.username} className="w-10 h-10 rounded-full object-cover border-2 border-primary-fixed shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                {product.seller?.username?.[0]?.toUpperCase()}
+              </div>
+            )}
             <div>
               <p className="font-label-lg text-label-lg text-on-surface">@{product.seller?.username}</p>
               <StarRating rating={product.sellerRating} size="sm" />
