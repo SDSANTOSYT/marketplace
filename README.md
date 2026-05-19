@@ -2,7 +2,7 @@
 
 Plataforma completa de compra y venta de ropa nueva y usada con negociación en tiempo real, asistente de modas con IA y sistema de outfits.
 
-**Proyecto académico para la materia de Desarrollo Web**
+**Proyecto académico para la materia de Diseño de Software I**
 
 ## 🚀 Stack Tecnológico
 
